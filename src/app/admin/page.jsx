@@ -1,7 +1,7 @@
 import AdminDashboard from '../../components/AdminDashboard';
 
 export const metadata = {
-  title: "Panel de Control | Alternativa Tecnológica",
+  title: "Gestión | Alternativa Tecnológica",
 };
 
 export default function AdminPage() {

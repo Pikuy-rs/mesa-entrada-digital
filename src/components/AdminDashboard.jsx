@@ -214,8 +214,11 @@ export default function AdminDashboard() {
               <tr style={{ background: 'rgba(252,252,252,0.05)', borderBottom: '1px solid var(--border-glass)' }}>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Fecha</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Estudiante</th>
+                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>DNI</th>
+                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Contacto</th>
+                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Carrera</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Trámite</th>
-                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Ubicación</th>
+                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Sede</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Estado</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)', textAlign: 'center' }}>Acciones</th>
               </tr>
@@ -235,16 +238,25 @@ export default function AdminDashboard() {
                     <td style={{ padding: '16px', fontSize: '0.9rem', color: 'rgba(252,252,252,0.7)' }}>
                       {formatDateTable(sub.createdAt)}
                     </td>
-                    <td style={{ padding: '16px' }}>
-                      <div style={{ fontWeight: 500 }}>{sub.nombre}</div>
-                      <div style={{ fontSize: '0.85rem', color: 'rgba(252,252,252,0.6)' }}>DNI: {sub.dni}</div>
+                    <td style={{ padding: '16px', fontWeight: 500 }}>
+                      {sub.nombre || 'No proporcionado'}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '0.9rem' }}>
+                      {sub.dni || '-'}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '0.85rem' }}>
+                      <div style={{ color: 'var(--color-text)' }}>{sub.celular || '-'}</div>
+                      <div style={{ color: 'rgba(252,252,252,0.6)' }}>{sub.mail || '-'}</div>
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '0.9rem' }}>
+                      {sub.carrera || '-'}
                     </td>
                     <td style={{ padding: '16px' }}>
                       <span style={{ display: 'inline-block', padding: '4px 8px', background: 'rgba(65, 119, 174, 0.1)', color: 'var(--color-primary)', borderRadius: '4px', fontSize: '0.85rem' }}>
-                        {sub.tipoSolicitud}
+                        {sub.tipoSolicitud || 'No proporcionado'}
                       </span>
                     </td>
-                    <td style={{ padding: '16px', fontSize: '0.9rem' }}>{sub.ubicacion}</td>
+                    <td style={{ padding: '16px', fontSize: '0.9rem' }}>{sub.ubicacion || '-'}</td>
                     <td style={{ padding: '16px' }}>
                       <span style={{ display: 'inline-block', padding: '4px 8px', background: 'rgba(172, 85, 164, 0.1)', color: 'var(--color-alert)', borderRadius: '4px', fontSize: '0.85rem', textTransform: 'capitalize' }}>
                         {sub.status === 'pending' ? 'Pendiente' : (sub.status || 'Pendiente')}
@@ -282,11 +294,14 @@ export default function AdminDashboard() {
       {selectedSubmission && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', zIndex: 999,
+          background: 'rgba(0,0,0,0.5)', zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
         }}>
-          <div className="glass-panel" style={{
-            background: 'var(--background)',
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '1.5rem',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             width: '100%', maxWidth: '600px',
             maxHeight: '90vh', overflowY: 'auto',
             padding: '32px', position: 'relative'
