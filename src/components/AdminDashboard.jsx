@@ -58,7 +58,7 @@ export default function AdminDashboard() {
 
   // Export to CSV
   const handleExportCSV = () => {
-    if (filteredSubmissions.length === 0) return;
+    if (loading || filteredSubmissions.length === 0) return;
 
     const dataToExport = filteredSubmissions.map(sub => ({
       Fecha: sub.createdAt ? format(sub.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A',
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
         <button 
           className="glass-button" 
           onClick={handleExportCSV}
-          disabled={filteredSubmissions.length === 0}
+          disabled={loading || filteredSubmissions.length === 0}
           style={{ flex: '0 0 auto' }}
         >
           <Download size={18} />

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { addSubmission } from '../services/submissions';
-import { Send, CheckCircle, Lock, Loader2 } from 'lucide-react';
+import { Send, CheckCircle, Lock, Loader2, AlertCircle } from 'lucide-react';
 
 export default function SubmissionForm() {
   const [formData, setFormData] = useState({
