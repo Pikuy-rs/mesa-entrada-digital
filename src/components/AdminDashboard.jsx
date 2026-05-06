@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { subscribeToSubmissions } from '../services/submissions';
-import { Download, Filter, Search, Lock, LogOut } from 'lucide-react';
-import Papa from 'papaparse';
+import { Download, Filter, Search, Lock, LogOut, Eye, X } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
 export default function AdminDashboard() {
@@ -17,6 +17,9 @@ export default function AdminDashboard() {
   const [filterUbicacion, setFilterUbicacion] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Modal
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   // Authentication
   const handleLogin = (e) => {
@@ -56,8 +59,8 @@ export default function AdminDashboard() {
     });
   }, [submissions, filterUbicacion, filterTipo, searchQuery]);
 
-  // Export to CSV
-  const handleExportCSV = () => {
+  // Export to Excel
+  const handleExportExcel = () => {
     if (loading || filteredSubmissions.length === 0) return;
 
     const dataToExport = filteredSubmissions.map(sub => ({
@@ -67,22 +70,21 @@ export default function AdminDashboard() {
       Celular: sub.celular || 'N/A',
       Mail: sub.mail || 'N/A',
       Carrera: sub.carrera,
-      Ubicacion: sub.ubicacion,
-      Tipo_Solicitud: sub.tipoSolicitud,
-      Estado: sub.status,
-      Descripcion: sub.descripcion
+      Sede: sub.ubicacion,
+      Tipo_Trámite: sub.tipoSolicitud,
+      Estado: sub.status === 'pending' ? 'Pendiente' : (sub.status || 'Pendiente'),
+      Detalle_Solicitud: sub.descripcion
     }));
 
-    const csv = Papa.unparse(dataToExport);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Trámites");
     
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `MesaEntrada_Export_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Auto-size columns loosely
+    const wscols = Object.keys(dataToExport[0]).map(key => ({ wch: Math.max(key.length, 15) }));
+    worksheet['!cols'] = wscols;
+
+    XLSX.writeFile(workbook, `MesaEntrada_Export_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
   };
 
   if (!isAuthenticated) {
@@ -174,12 +176,12 @@ export default function AdminDashboard() {
 
         <button 
           className="glass-button" 
-          onClick={handleExportCSV}
+          onClick={handleExportExcel}
           disabled={loading || filteredSubmissions.length === 0}
           style={{ flex: '0 0 auto' }}
         >
           <Download size={18} />
-          Exportar CSV
+          Exportar Excel
         </button>
       </div>
 
@@ -193,6 +195,7 @@ export default function AdminDashboard() {
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Trámite</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Ubicación</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Estado</th>
+                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)', textAlign: 'center' }}>Detalle</th>
               </tr>
             </thead>
             <tbody>
@@ -222,8 +225,19 @@ export default function AdminDashboard() {
                     <td style={{ padding: '16px', fontSize: '0.9rem' }}>{sub.ubicacion}</td>
                     <td style={{ padding: '16px' }}>
                       <span style={{ display: 'inline-block', padding: '4px 8px', background: 'rgba(172, 85, 164, 0.1)', color: 'var(--color-alert)', borderRadius: '4px', fontSize: '0.85rem', textTransform: 'capitalize' }}>
-                        {sub.status || 'Pendiente'}
+                        {sub.status === 'pending' ? 'Pendiente' : (sub.status || 'Pendiente')}
                       </span>
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <button 
+                        onClick={() => setSelectedSubmission(sub)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', padding: '8px', borderRadius: '4px', transition: 'background 0.2s' }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(65, 119, 174, 0.1)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                        title="Ver detalle"
+                      >
+                        <Eye size={20} />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -232,6 +246,80 @@ export default function AdminDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Modal Detalles */}
+      {selectedSubmission && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', zIndex: 999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div className="glass-panel" style={{
+            background: 'var(--background)',
+            width: '100%', maxWidth: '600px',
+            maxHeight: '90vh', overflowY: 'auto',
+            padding: '32px', position: 'relative'
+          }}>
+            <button 
+              onClick={() => setSelectedSubmission(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text)' }}
+            >
+              <X size={24} />
+            </button>
+            <h2 style={{ marginBottom: '24px', color: 'var(--color-primary)', fontSize: '1.5rem', paddingBottom: '16px', borderBottom: '1px solid var(--border-glass)' }}>
+              Detalle del Trámite
+            </h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Estudiante</span>
+                <strong style={{ fontSize: '1.1rem' }}>{selectedSubmission.nombre}</strong>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>DNI</span>
+                <strong style={{ fontSize: '1.1rem' }}>{selectedSubmission.dni}</strong>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Carrera</span>
+                <strong>{selectedSubmission.carrera}</strong>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Sede</span>
+                <strong>{selectedSubmission.ubicacion}</strong>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Celular</span>
+                <strong>{selectedSubmission.celular}</strong>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Mail</span>
+                <strong>{selectedSubmission.mail}</strong>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Tipo de Trámite</span>
+              <span style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(65, 119, 174, 0.1)', color: 'var(--color-primary)', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>
+                {selectedSubmission.tipoSolicitud}
+              </span>
+            </div>
+
+            <div style={{ background: 'rgba(252,252,252,0.05)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+              <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7, marginBottom: '8px' }}>Descripción Detallada</span>
+              <p style={{ margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                {selectedSubmission.descripcion}
+              </p>
+            </div>
+            
+            <div style={{ marginTop: '24px', textAlign: 'right' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.5 }}>
+                Registrado el {selectedSubmission.createdAt ? format(selectedSubmission.createdAt.toDate(), 'dd/MM/yyyy a las HH:mm') : 'N/A'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
