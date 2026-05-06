@@ -1,5 +1,5 @@
 import { db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 
 const COLLECTION_NAME = "submissions";
 
@@ -29,4 +29,14 @@ export const subscribeToSubmissions = (callback) => {
   }, (error) => {
     console.error("Error fetching submissions:", error);
   });
+};
+
+export const deleteSubmission = async (id) => {
+  try {
+    await deleteDoc(doc(db, COLLECTION_NAME, id));
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting submission: ", error);
+    return { success: false, error: error.message };
+  }
 };

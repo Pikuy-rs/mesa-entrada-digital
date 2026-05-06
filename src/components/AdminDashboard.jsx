@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
-import { subscribeToSubmissions } from '../services/submissions';
-import { Download, Filter, Search, Lock, LogOut, Eye, X } from 'lucide-react';
+import { subscribeToSubmissions, deleteSubmission } from '../services/submissions';
+import { Download, Filter, Search, Lock, LogOut, Eye, X, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
@@ -59,12 +59,20 @@ export default function AdminDashboard() {
     });
   }, [submissions, filterUbicacion, filterTipo, searchQuery]);
 
+  // Excel Date Helper
+  const formatDateExcel = (ts) => {
+    if (ts && typeof ts.toDate === 'function') {
+      return format(ts.toDate(), 'yyyy-MM-dd HH:mm');
+    }
+    return 'Pendiente';
+  };
+
   // Export to Excel
   const handleExportExcel = () => {
     if (loading || filteredSubmissions.length === 0) return;
 
     const dataToExport = filteredSubmissions.map(sub => ({
-      Fecha: sub.createdAt ? format(sub.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A',
+      Fecha: formatDateExcel(sub.createdAt),
       Nombre: sub.nombre,
       DNI: sub.dni,
       Celular: sub.celular || 'N/A',
@@ -85,6 +93,20 @@ export default function AdminDashboard() {
     worksheet['!cols'] = wscols;
 
     XLSX.writeFile(workbook, `MesaEntrada_Export_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("¿Estás seguro de que deseas eliminar este registro de forma permanente?")) {
+      await deleteSubmission(id);
+    }
+  };
+
+  // Table Date Helper
+  const formatDateTable = (ts) => {
+    if (ts && typeof ts.toDate === 'function') {
+      return ts.toDate().toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+    return 'Procesando...';
   };
 
   if (!isAuthenticated) {
@@ -195,7 +217,7 @@ export default function AdminDashboard() {
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Trámite</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Ubicación</th>
                 <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)' }}>Estado</th>
-                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)', textAlign: 'center' }}>Detalle</th>
+                <th style={{ padding: '16px', fontWeight: 600, color: 'var(--color-primary)', textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -211,7 +233,7 @@ export default function AdminDashboard() {
                 filteredSubmissions.map((sub) => (
                   <tr key={sub.id} style={{ borderBottom: '1px solid rgba(252,252,252,0.05)', transition: 'background 0.2s' }}>
                     <td style={{ padding: '16px', fontSize: '0.9rem', color: 'rgba(252,252,252,0.7)' }}>
-                      {sub.createdAt ? format(sub.createdAt.toDate(), 'dd/MM/yyyy HH:mm') : '...'}
+                      {formatDateTable(sub.createdAt)}
                     </td>
                     <td style={{ padding: '16px' }}>
                       <div style={{ fontWeight: 500 }}>{sub.nombre}</div>
@@ -228,7 +250,7 @@ export default function AdminDashboard() {
                         {sub.status === 'pending' ? 'Pendiente' : (sub.status || 'Pendiente')}
                       </span>
                     </td>
-                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                    <td style={{ padding: '16px', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '8px' }}>
                       <button 
                         onClick={() => setSelectedSubmission(sub)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', padding: '8px', borderRadius: '4px', transition: 'background 0.2s' }}
@@ -237,6 +259,15 @@ export default function AdminDashboard() {
                         title="Ver detalle"
                       >
                         <Eye size={20} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(sub.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-alert)', padding: '8px', borderRadius: '4px', transition: 'background 0.2s' }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(172, 85, 164, 0.1)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                        title="Eliminar registro"
+                      >
+                        <Trash2 size={20} />
                       </button>
                     </td>
                   </tr>
@@ -273,47 +304,47 @@ export default function AdminDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
               <div>
                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Estudiante</span>
-                <strong style={{ fontSize: '1.1rem' }}>{selectedSubmission.nombre}</strong>
+                <strong style={{ fontSize: '1.1rem' }}>{selectedSubmission.nombre || 'No proporcionado'}</strong>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>DNI</span>
-                <strong style={{ fontSize: '1.1rem' }}>{selectedSubmission.dni}</strong>
+                <strong style={{ fontSize: '1.1rem' }}>{selectedSubmission.dni || 'No proporcionado'}</strong>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Carrera</span>
-                <strong>{selectedSubmission.carrera}</strong>
+                <strong>{selectedSubmission.carrera || 'No proporcionado'}</strong>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Sede</span>
-                <strong>{selectedSubmission.ubicacion}</strong>
+                <strong>{selectedSubmission.ubicacion || 'No proporcionado'}</strong>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Celular</span>
-                <strong>{selectedSubmission.celular}</strong>
+                <strong>{selectedSubmission.celular || 'No proporcionado'}</strong>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Mail</span>
-                <strong>{selectedSubmission.mail}</strong>
+                <strong>{selectedSubmission.mail || 'No proporcionado'}</strong>
               </div>
             </div>
 
             <div style={{ marginBottom: '24px' }}>
               <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7 }}>Tipo de Trámite</span>
               <span style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(65, 119, 174, 0.1)', color: 'var(--color-primary)', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>
-                {selectedSubmission.tipoSolicitud}
+                {selectedSubmission.tipoSolicitud || 'No proporcionado'}
               </span>
             </div>
 
             <div style={{ background: 'rgba(252,252,252,0.05)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
               <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.7, marginBottom: '8px' }}>Descripción Detallada</span>
               <p style={{ margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                {selectedSubmission.descripcion}
+                {selectedSubmission.descripcion || 'Sin descripción'}
               </p>
             </div>
             
             <div style={{ marginTop: '24px', textAlign: 'right' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--color-text)', opacity: 0.5 }}>
-                Registrado el {selectedSubmission.createdAt ? format(selectedSubmission.createdAt.toDate(), 'dd/MM/yyyy a las HH:mm') : 'N/A'}
+                Registrado el {formatDateTable(selectedSubmission.createdAt)}
               </span>
             </div>
           </div>
