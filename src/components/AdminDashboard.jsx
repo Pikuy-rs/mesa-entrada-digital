@@ -298,7 +298,7 @@ export default function AdminDashboard() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
         }}>
           <div style={{
-            background: 'rgba(255, 255, 255, 0.98)',
+            background: '#ffffff',
             backdropFilter: 'blur(10px)',
             borderRadius: '1.5rem',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',

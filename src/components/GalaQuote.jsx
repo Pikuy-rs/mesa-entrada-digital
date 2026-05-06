@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { Quote } from 'lucide-react';
 import Image from 'next/image';
@@ -32,7 +33,7 @@ export default function GalaQuote() {
         .gala-quote-box {
           flex: 1 1 60%;
           position: relative;
-          z-index: 2;
+          z-index: 10; /* Texto siempre arriba */
         }
         .gala-image-box {
           flex: 1 1 40%;
@@ -40,7 +41,19 @@ export default function GalaQuote() {
           justify-content: center;
           align-items: flex-end;
           position: relative;
-          min-height: 400px;
+          min-height: 450px;
+        }
+        .photo-wrapper {
+          position: absolute;
+          bottom: -80px;
+          right: 0;
+          width: 100%;
+          height: 120%;
+          z-index: 1;
+          pointerEvents: none;
+          display: flex;
+          justify-content: center;
+          align-items: flex-end;
         }
         .quote-text {
           font-size: clamp(1.5rem, 4vw, 2.5rem);
@@ -52,30 +65,41 @@ export default function GalaQuote() {
         }
         @media (max-width: 768px) {
           .gala-container {
-            flex-direction: column;
+            flex-direction: column !important;
             text-align: center;
-            gap: 30px;
+            gap: 20px;
           }
           .gala-quote-box {
             flex: 1 1 100%;
+            padding-bottom: 2rem;
           }
           .gala-image-box {
             flex: 1 1 100%;
-            min-height: 300px;
-            margin-top: 20px;
+            min-height: auto;
+            margin-top: 0;
+            position: relative;
+            overflow: visible;
+          }
+          .photo-wrapper {
+            position: relative !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 auto;
+            display: block;
+          }
+          .gala-photo {
+            max-width: 350px !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 auto;
           }
           .quote-text {
-            font-size: 1.4rem;
+            font-size: 1.35rem;
           }
           .footer-flex {
             justify-content: center;
-          }
-          .gala-photo {
-            max-width: 80% !important;
-          }
-          .photo-wrapper {
-            bottom: -40px !important;
-            height: 110% !important;
           }
         }
       `}</style>
@@ -84,7 +108,7 @@ export default function GalaQuote() {
         
         {/* Left Side: Quote */}
         <div className="gala-quote-box">
-          <Quote size={60} color="var(--color-primary)" style={{ opacity: 0.2, position: 'absolute', top: '-20px', left: '-20px', zIndex: -1 }} />
+          <Quote size={60} color="var(--color-primary)" style={{ opacity: 0.15, position: 'absolute', top: '-20px', left: '-20px', zIndex: -1 }} />
           
           <blockquote style={{ margin: 0 }}>
             <p className="quote-text">
@@ -106,25 +130,14 @@ export default function GalaQuote() {
 
         {/* Right Side: Image */}
         <div className="gala-image-box">
-          <div className="photo-wrapper" style={{
-            position: 'absolute',
-            bottom: '-80px',
-            right: '0',
-            width: '100%',
-            height: '120%',
-            zIndex: 1,
-            pointerEvents: 'none',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-end'
-          }}>
+          <div className="photo-wrapper">
             <Image 
               src="/gala.png"
               alt="Gala Borquez"
               width={500}
               height={600}
               className="gala-photo"
-              style={{ objectFit: 'contain', filter: 'drop-shadow(-10px 10px 20px rgba(0,0,0,0.1))', maxWidth: '500px' }}
+              style={{ objectFit: 'contain', filter: 'drop-shadow(-10px 10px 20px rgba(0,0,0,0.1))' }}
             />
           </div>
         </div>
