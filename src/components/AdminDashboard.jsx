@@ -22,6 +22,12 @@ import {
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
+const getStatusColor = (val) => {
+  if (val >= 3.8) return { bg: '#dcfce7', text: '#166534', label: 'Excelente' };
+  if (val >= 2.6) return { bg: '#fff7ed', text: '#9a3412', label: 'Aceptable' };
+  return { bg: '#fee2e2', text: '#991b1b', label: 'Crítico' };
+};
+
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
@@ -33,13 +39,22 @@ export default function AdminDashboard() {
   const [allEvaluations, setAllEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Filters & Sorting for Academic Tabs
+  const [academicSortField, setAcademicSortField] = useState('catedra');
+  const [academicSortOrder, setAcademicSortOrder] = useState('asc');
+  const [academicFilterCarrera, setAcademicFilterCarrera] = useState('');
+  const [academicSearch, setAcademicSearch] = useState('');
+
+  const [evalSortField, setEvalSortField] = useState('createdAt');
+  const [evalSortOrder, setEvalSortOrder] = useState('desc');
+  const [evalFilterCarrera, setEvalFilterCarrera] = useState('');
+  const [evalSearch, setEvalSearch] = useState('');
+
+  // Mesa de Entrada Filters
   const [filterUbicacion, setFilterUbicacion] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
-  const [filterStatus, setFilterStatus] = useState('pending'); // 'pending', 'completed', ''
+  const [filterStatus, setFilterStatus] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Modal
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   // Authentication
@@ -81,7 +96,38 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated, activeTab]);
 
-  // Derived State (Filtered Submissions)
+  // Sorting Helper
+  const sortData = (data, field, order) => {
+    return [...data].sort((a, b) => {
+      let valA = field.split('.').reduce((obj, key) => obj?.[key], a);
+      let valB = field.split('.').reduce((obj, key) => obj?.[key], b);
+      
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+      
+      if (valA < valB) return order === 'asc' ? -1 : 1;
+      if (valA > valB) return order === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Processed Academic Stats
+  const processedAcademic = useMemo(() => {
+    let filtered = academicStats.filter(t => t.stats.count > 0);
+    if (academicFilterCarrera) filtered = filtered.filter(t => t.carrera === academicFilterCarrera);
+    if (academicSearch) filtered = filtered.filter(t => t.catedra.toLowerCase().includes(academicSearch.toLowerCase()));
+    return sortData(filtered, academicSortField, academicSortOrder);
+  }, [academicStats, academicFilterCarrera, academicSearch, academicSortField, academicSortOrder]);
+
+  // Processed Evaluations
+  const processedEvaluations = useMemo(() => {
+    let filtered = allEvaluations;
+    if (evalFilterCarrera) filtered = filtered.filter(e => e.carrera === evalFilterCarrera);
+    if (evalSearch) filtered = filtered.filter(e => e.catedra.toLowerCase().includes(evalSearch.toLowerCase()));
+    return sortData(filtered, evalSortField, evalSortOrder);
+  }, [allEvaluations, evalFilterCarrera, evalSearch, evalSortField, evalSortOrder]);
+
+  // Processed Submissions
   const filteredSubmissions = useMemo(() => {
     return submissions.filter(sub => {
       const matchUbicacion = filterUbicacion ? sub.ubicacion === filterUbicacion : true;
@@ -152,23 +198,81 @@ export default function AdminDashboard() {
   const handleExportAcademicExcel = () => {
     if (loading || allEvaluations.length === 0) return;
 
-    const dataToExport = allEvaluations.map(e => ({
-      Fecha: formatDateExcel(e.createdAt),
-      Carrera: e.carrera,
-      Cátedra: e.catedra,
-      Docente: e.teacherName,
-      ICT: e.ict,
-      NDC: e.ndc,
-      CAT: e.cat,
-      TCE: e.tce,
-      Acción_Excelencia: e.accionExcelencia
-    }));
+    // Metadatos iniciales
+    const metadata = [
+      ["Informe de Gestión de Excelencia Académica - Alternativa Tecnológica"],
+      [`Fecha de Reporte: ${format(new Date(), 'dd/MM/yyyy')}`],
+      [""], // Fila vacía
+      ["Fecha", "Carrera", "Cátedra / Materia", "Claridad Conceptual (ICT)", "Disponibilidad de Material (NDC)", "Criterio de Evaluación (CAT)", "Empatía y Sugerencias (TCE)", "Feedback Cualitativo"]
+    ];
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const dataToExport = allEvaluations.map(e => [
+      e.id,
+      formatDateExcel(e.createdAt),
+      e.carrera,
+      e.catedra,
+      Math.round(e.ict * 10) / 10,
+      Math.round(e.ndc * 10) / 10,
+      Math.round(e.cat * 10) / 10,
+      Math.round(e.tce * 10) / 10,
+      e.accionExcelencia || 'N/A'
+    ]);
+
+    // Glosario al final del archivo
+    const glossary = [
+      [""], // Fila vacía
+      ["GLOSARIO DE MÉTRICAS"],
+      ["ICT (Claridad Conceptual)", "Evalúa la capacidad del docente para transmitir conceptos complejos de forma clara."],
+      ["NDC (Disponibilidad de Material)", "Mide la entrega en tiempo y forma de los recursos de estudio y bibliografía."],
+      ["CAT (Criterio de Evaluación)", "Evalúa la transparencia y coherencia de los criterios de corrección."],
+      ["TCE (Empatía y Sugerencias)", "Mide la apertura del docente hacia las inquietudes y respuesta ante imprevistos."],
+      ["Rango de valores", "1.0 a 5.0"]
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet([...metadata, ...dataToExport, ...glossary]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Evaluaciones_Detalle");
-    XLSX.writeFile(workbook, `Reporte_Excelencia_Detalle_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte_Total_AT");
+
+    const wscols = [
+      { wch: 15 }, { wch: 18 }, { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }
+    ];
+    worksheet['!cols'] = wscols;
+
+    XLSX.writeFile(workbook, `Reporte_Excelencia_TOTAL_AT_${format(new Date(), 'yyyyMMdd')}.xlsx`);
   };
+
+  // Glossary Component
+  const MetricGlossary = () => (
+    <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e2e8f0', marginBottom: '32px' }}>
+      <h4 style={{ margin: '0 0 16px 0', color: '#3f75ab', fontWeight: '900', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <MessageSquare size={20} /> Referencia de Evaluación
+      </h4>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+        {[
+          { s: 'ICT', t: 'Claridad Conceptual', d: 'Evalúa la capacidad del docente para transmitir conceptos complejos de forma clara.' },
+          { s: 'NDC', t: 'Disponibilidad de Material', d: 'Mide la entrega en tiempo y forma de los recursos de estudio y bibliografía.' },
+          { s: 'CAT', t: 'Criterio de Evaluación', d: 'Evalúa la transparencia y coherencia de los criterios de corrección.' },
+          { s: 'TCE', t: 'Empatía y Sugerencias', d: 'Mide la apertura del docente hacia las inquietudes y respuesta ante imprevistos.' }
+        ].map(item => (
+          <div key={item.s}>
+            <div style={{ fontWeight: '900', color: '#000', fontSize: '0.9rem' }}>{item.s}: {item.t}</div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4' }}>{item.d}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: '16px', display: 'flex', gap: '24px', padding: '12px 0', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' }}></span> 3.8 - 5.0: Excelente
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' }}></span> 2.6 - 3.7: Aceptable
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }}></span> 1.0 - 2.5: Crítico
+        </div>
+      </div>
+    </div>
+  );
 
   const handleDelete = async (id) => {
     if (window.confirm("¿Estás seguro de que deseas eliminar este registro?")) {
@@ -299,11 +403,61 @@ export default function AdminDashboard() {
                     </td>
                     <td style={{ padding: '24px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button onClick={() => setSelectedSubmission(sub)} style={{ background: '#f3f4f6', border: 'none', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}><Eye size={20} /></button>
-                        {sub.status === 'pending' && (
-                          <button onClick={() => handleUpdateStatus(sub.id, 'completed')} style={{ background: '#3f75ab', border: 'none', padding: '10px', borderRadius: '10px', cursor: 'pointer', color: '#fff' }}><ChevronRight size={20} /></button>
-                        )}
-                        <button onClick={() => handleDelete(sub.id)} style={{ background: 'rgba(239, 95, 39, 0.1)', border: 'none', padding: '10px', borderRadius: '10px', cursor: 'pointer', color: '#ef5f27' }}><Trash2 size={20} /></button>
+                        <button 
+                          onClick={() => setSelectedSubmission(sub)} 
+                          title="Ver Detalle"
+                          style={{ 
+                            background: '#f3f4f6', 
+                            border: 'none', 
+                            padding: '12px', 
+                            borderRadius: '12px', 
+                            cursor: 'pointer',
+                            color: '#3f75ab',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
+                          onMouseOut={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                        >
+                          <Eye size={22} />
+                        </button>
+
+                        <button 
+                          onClick={() => sub.status === 'pending' && handleUpdateStatus(sub.id, 'completed')} 
+                          title={sub.status === 'completed' ? "Gestión Realizada" : "Marcar como Completado"}
+                          disabled={sub.status === 'completed'}
+                          style={{ 
+                            background: sub.status === 'completed' ? '#10b981' : '#3f75ab', 
+                            border: 'none', 
+                            padding: '12px', 
+                            borderRadius: '12px', 
+                            cursor: sub.status === 'completed' ? 'default' : 'pointer', 
+                            color: '#fff',
+                            opacity: sub.status === 'completed' ? 0.7 : 1,
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => sub.status !== 'completed' && (e.currentTarget.style.transform = 'scale(1.1)')}
+                          onMouseOut={(e) => sub.status !== 'completed' && (e.currentTarget.style.transform = 'scale(1)')}
+                        >
+                          <CheckCircle2 size={22} />
+                        </button>
+
+                        <button 
+                          onClick={() => handleDelete(sub.id)} 
+                          title="Eliminar Registro"
+                          style={{ 
+                            background: 'rgba(239, 95, 39, 0.1)', 
+                            border: 'none', 
+                            padding: '12px', 
+                            borderRadius: '12px', 
+                            cursor: 'pointer', 
+                            color: '#ef5f27',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 95, 39, 0.2)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(239, 95, 39, 0.1)'}
+                        >
+                          <Trash2 size={22} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -316,6 +470,41 @@ export default function AdminDashboard() {
 
       {activeTab === 'academic' && (
         <div className="animate-fade-in">
+          <MetricGlossary />
+          
+          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+            <div style={{ flex: '1 1 300px', position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
+              <input 
+                type="text" 
+                placeholder="Buscar Cátedra..." 
+                className="glass-input" 
+                value={academicSearch} 
+                onChange={(e) => setAcademicSearch(e.target.value)} 
+                style={{ paddingLeft: '48px', width: '100%', borderRadius: '1rem' }} 
+              />
+            </div>
+            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '1rem' }}>
+              <option value="">Todas las Carreras</option>
+              <option value="Ingeniería en Sistemas de Información">Sistemas</option>
+              <option value="Ingeniería Electrónica">Electrónica</option>
+            </select>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontWeight: '800', color: '#6b7280' }}>
+              Ordenar por:
+              <select className="glass-input" value={academicSortField} onChange={(e) => setAcademicSortField(e.target.value)} style={{ borderRadius: '1rem', padding: '8px 16px' }}>
+                <option value="catedra">Nombre</option>
+                <option value="stats.promedioGeneral">Promedio Gral</option>
+                <option value="stats.count">Evaluaciones</option>
+              </select>
+              <button 
+                onClick={() => setAcademicSortOrder(academicSortOrder === 'asc' ? 'desc' : 'asc')}
+                style={{ background: '#f3f4f6', border: 'none', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}
+              >
+                {academicSortOrder === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
+          </div>
+
           <div style={{ background: '#ffffff', borderRadius: '2rem', overflow: 'hidden', border: '2px solid #e5e7eb', boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -327,7 +516,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {academicStats.filter(t => t.stats.count > 0).map(t => (
+                {processedAcademic.map(t => (
                   <tr key={t.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '24px' }}>
                       <div style={{ fontWeight: '900', color: '#000', fontSize: '1.1rem' }}>{t.catedra}</div>
@@ -335,7 +524,19 @@ export default function AdminDashboard() {
                     </td>
                     <td style={{ padding: '24px', textAlign: 'center', fontWeight: '900' }}>{t.stats.count}</td>
                     <td style={{ padding: '24px', textAlign: 'center' }}>
-                      <span style={{ background: '#3f75ab', color: '#fff', padding: '8px 16px', borderRadius: '2rem', fontWeight: '900' }}>{t.stats.promedioGeneral.toFixed(2)}</span>
+                      <span 
+                        title={`Estado: ${getStatusColor(t.stats.promedioGeneral).label}`}
+                        style={{ 
+                          background: getStatusColor(t.stats.promedioGeneral).bg, 
+                          color: getStatusColor(t.stats.promedioGeneral).text, 
+                          padding: '8px 16px', 
+                          borderRadius: '2rem', 
+                          fontWeight: '900',
+                          border: `2px solid ${getStatusColor(t.stats.promedioGeneral).text}20`
+                        }}
+                      >
+                        {Math.round(t.stats.promedioGeneral * 10) / 10}
+                      </span>
                     </td>
                     <td style={{ padding: '24px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
@@ -345,9 +546,19 @@ export default function AdminDashboard() {
                           { label: 'CAT', val: t.stats.cat },
                           { label: 'TCE', val: t.stats.tce }
                         ].map(m => (
-                          <div key={m.label} style={{ textAlign: 'center', background: '#f9fafb', padding: '8px', borderRadius: '10px' }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '900', color: '#3f75ab' }}>{m.label}</div>
-                            <div style={{ fontWeight: '900' }}>{m.val.toFixed(1)}</div>
+                          <div 
+                            key={m.label} 
+                            title={`${m.label}: ${getStatusColor(m.val).label}`}
+                            style={{ 
+                              textAlign: 'center', 
+                              background: getStatusColor(m.val).bg, 
+                              padding: '8px', 
+                              borderRadius: '10px',
+                              border: `1px solid ${getStatusColor(m.val).text}15`
+                            }}
+                          >
+                            <div style={{ fontSize: '0.7rem', fontWeight: '900', color: getStatusColor(m.val).text }}>{m.label}</div>
+                            <div style={{ fontWeight: '900', color: getStatusColor(m.val).text }}>{Math.round(m.val * 10) / 10}</div>
                           </div>
                         ))}
                       </div>
@@ -362,8 +573,25 @@ export default function AdminDashboard() {
 
       {activeTab === 'evaluations' && (
         <div className="animate-fade-in">
-          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontWeight: '900', fontSize: '1.5rem' }}>Registro Individual de Evaluaciones</h3>
+          <MetricGlossary />
+          
+          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+            <div style={{ flex: '1 1 300px', position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
+              <input 
+                type="text" 
+                placeholder="Buscar por Cátedra..." 
+                className="glass-input" 
+                value={evalSearch} 
+                onChange={(e) => setEvalSearch(e.target.value)} 
+                style={{ paddingLeft: '48px', width: '100%', borderRadius: '1rem' }} 
+              />
+            </div>
+            <select className="glass-input" value={evalFilterCarrera} onChange={(e) => setEvalFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '1rem' }}>
+              <option value="">Todas las Carreras</option>
+              <option value="Ingeniería en Sistemas de Información">Sistemas</option>
+              <option value="Ingeniería Electrónica">Electrónica</option>
+            </select>
             <button className="glass-button" style={{ background: '#3f75ab', color: '#fff' }} onClick={handleExportAcademicExcel}>
               <Download size={18} /> Exportar Log Completo (.xlsx)
             </button>
@@ -373,14 +601,24 @@ export default function AdminDashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '2px solid #3f75ab' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Fecha</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Cátedra / Carrera</th>
+                  <th 
+                    style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab', cursor: 'pointer' }}
+                    onClick={() => { setEvalSortField('createdAt'); setEvalSortOrder(evalSortOrder === 'asc' ? 'desc' : 'asc'); }}
+                  >
+                    Fecha {evalSortField === 'createdAt' && (evalSortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th 
+                    style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab', cursor: 'pointer' }}
+                    onClick={() => { setEvalSortField('catedra'); setEvalSortOrder(evalSortOrder === 'asc' ? 'desc' : 'asc'); }}
+                  >
+                    Cátedra / Carrera {evalSortField === 'catedra' && (evalSortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab' }}>Puntajes</th>
                   <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Acción para la Excelencia</th>
                 </tr>
               </thead>
               <tbody>
-                {allEvaluations.map(evalu => (
+                {processedEvaluations.map(evalu => (
                   <tr key={evalu.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '24px', fontWeight: '700', color: '#6b7280', fontSize: '0.85rem' }}>{formatDateExcel(evalu.createdAt)}</td>
                     <td style={{ padding: '24px' }}>
@@ -395,9 +633,22 @@ export default function AdminDashboard() {
                           { l: 'C', v: evalu.cat },
                           { l: 'T', v: evalu.tce }
                         ].map(p => (
-                          <div key={p.l} style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: '6px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.6rem', fontWeight: '900', color: '#3f75ab' }}>{p.l}</div>
-                            <div style={{ fontWeight: '900', fontSize: '0.85rem' }}>{p.v}</div>
+                          <div 
+                            key={p.l} 
+                            title={`Nivel: ${getStatusColor(p.v).label}`}
+                            style={{ 
+                              background: getStatusColor(p.v).bg, 
+                              padding: '4px 8px', 
+                              borderRadius: '6px', 
+                              textAlign: 'center', 
+                              minWidth: '36px',
+                              border: `1px solid ${getStatusColor(p.v).text}15`
+                            }}
+                          >
+                            <div style={{ fontSize: '0.6rem', fontWeight: '900', color: getStatusColor(p.v).text }}>{p.l}</div>
+                            <div style={{ fontWeight: '900', fontSize: '0.85rem', color: getStatusColor(p.v).text }}>
+                              {typeof p.v === 'number' ? Math.round(p.v * 10) / 10 : p.v}
+                            </div>
                           </div>
                         ))}
                       </div>

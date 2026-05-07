@@ -125,15 +125,27 @@ export const getTeacherEvaluations = async (teacherId) => {
 
 export const getAllTeachersWithStats = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, TEACHERS_COLLECTION));
-    const teachers = [];
-    
-    for (const teacherDoc of querySnapshot.docs) {
-      const teacherData = teacherDoc.data();
-      const allEvaluations = await getTeacherEvaluations(teacherDoc.id);
-      
-      // Filtro de Venganza: No promediar los que son isOutlier
-      const validEvaluations = allEvaluations.filter(e => !e.isOutlier);
+    // 1. Fetch all teachers and all evaluations in parallel
+    const [teachersSnapshot, evalsSnapshot] = await Promise.all([
+      getDocs(collection(db, TEACHERS_COLLECTION)),
+      getDocs(collection(db, "evaluaciones_excelencia"))
+    ]);
+
+    const teachers = teachersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const allEvals = evalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // 2. Group evaluations by teacherId
+    const evalsByTeacher = allEvals.reduce((acc, curr) => {
+      const tid = curr.teacherId;
+      if (!acc[tid]) acc[tid] = [];
+      acc[tid].push(curr);
+      return acc;
+    }, {});
+
+    // 3. Calculate stats for each teacher
+    return teachers.map(teacher => {
+      const teacherEvals = evalsByTeacher[teacher.id] || [];
+      const validEvaluations = teacherEvals.filter(e => !e.isOutlier);
       
       const stats = validEvaluations.length > 0 ? {
         ict: validEvaluations.reduce((acc, curr) => acc + curr.ict, 0) / validEvaluations.length,
@@ -142,17 +154,14 @@ export const getAllTeachersWithStats = async () => {
         tce: validEvaluations.reduce((acc, curr) => acc + curr.tce, 0) / validEvaluations.length,
         promedioGeneral: (validEvaluations.reduce((acc, curr) => acc + curr.ict + curr.ndc + curr.cat + curr.tce, 0) / (validEvaluations.length * 4)),
         count: validEvaluations.length,
-        outlierCount: allEvaluations.length - validEvaluations.length
-      } : { ict: 0, ndc: 0, cat: 0, tce: 0, promedioGeneral: 0, count: 0, outlierCount: allEvaluations.length };
-      
-      teachers.push({
-        id: teacherDoc.id,
-        ...teacherData,
+        outlierCount: teacherEvals.length - validEvaluations.length
+      } : { ict: 0, ndc: 0, cat: 0, tce: 0, promedioGeneral: 0, count: 0, outlierCount: teacherEvals.length };
+
+      return {
+        ...teacher,
         stats
-      });
-    }
-    
-    return teachers;
+      };
+    });
   } catch (error) {
     console.error("Error getting all teachers with stats:", error);
     return [];
