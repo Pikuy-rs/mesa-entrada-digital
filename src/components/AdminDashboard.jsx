@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   const [allEvaluations, setAllEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters & Sorting for Academic Tabs
+  // Filters & Sorting for Academic Tabs (Unified for Persistence)
   const [academicSortField, setAcademicSortField] = useState('catedra');
   const [academicSortOrder, setAcademicSortOrder] = useState('asc');
   const [academicFilterCarrera, setAcademicFilterCarrera] = useState('');
@@ -47,7 +47,6 @@ export default function AdminDashboard() {
 
   const [evalSortField, setEvalSortField] = useState('createdAt');
   const [evalSortOrder, setEvalSortOrder] = useState('desc');
-  const [evalFilterCarrera, setEvalFilterCarrera] = useState('');
   const [evalSearch, setEvalSearch] = useState('');
 
   // Mesa de Entrada Filters
@@ -122,10 +121,10 @@ export default function AdminDashboard() {
   // Processed Evaluations
   const processedEvaluations = useMemo(() => {
     let filtered = allEvaluations;
-    if (evalFilterCarrera) filtered = filtered.filter(e => e.carrera === evalFilterCarrera);
+    if (academicFilterCarrera) filtered = filtered.filter(e => e.carrera === academicFilterCarrera);
     if (evalSearch) filtered = filtered.filter(e => e.catedra.toLowerCase().includes(evalSearch.toLowerCase()));
     return sortData(filtered, evalSortField, evalSortOrder);
-  }, [allEvaluations, evalFilterCarrera, evalSearch, evalSortField, evalSortOrder]);
+  }, [allEvaluations, academicFilterCarrera, evalSearch, evalSortField, evalSortOrder]);
 
   // Processed Submissions
   const filteredSubmissions = useMemo(() => {
@@ -194,19 +193,19 @@ export default function AdminDashboard() {
     }
   };
 
-  // Export Academic Excellence
+  // Export Academic Excellence (Detailed Log)
   const handleExportAcademicExcel = () => {
     if (loading || allEvaluations.length === 0) return;
 
-    // Metadatos iniciales
     const metadata = [
-      ["Informe de Gestión de Excelencia Académica - Alternativa Tecnológica"],
+      ["Reporte Estratégico de Calidad Educativa - Alternativa Tecnológica"],
+      [`Tipo: Log Detallado de Evaluaciones`],
       [`Fecha de Reporte: ${format(new Date(), 'dd/MM/yyyy')}`],
-      [""], // Fila vacía
-      ["Fecha", "Carrera", "Cátedra / Materia", "Claridad Conceptual (ICT)", "Disponibilidad de Material (NDC)", "Criterio de Evaluación (CAT)", "Empatía y Sugerencias (TCE)", "Feedback Cualitativo"]
+      [""],
+      ["ID", "Fecha", "Carrera", "Cátedra / Materia", "Claridad Conceptual (ICT)", "Disponibilidad de Material (NDC)", "Criterio de Evaluación (CAT)", "Empatía y Sugerencias (TCE)", "Feedback Cualitativo"]
     ];
 
-    const dataToExport = allEvaluations.map(e => [
+    const dataToExport = processedEvaluations.map(e => [
       e.id,
       formatDateExcel(e.createdAt),
       e.carrera,
@@ -218,27 +217,49 @@ export default function AdminDashboard() {
       e.accionExcelencia || 'N/A'
     ]);
 
-    // Glosario al final del archivo
     const glossary = [
-      [""], // Fila vacía
+      [""],
       ["GLOSARIO DE MÉTRICAS"],
       ["ICT (Claridad Conceptual)", "Evalúa la capacidad del docente para transmitir conceptos complejos de forma clara."],
       ["NDC (Disponibilidad de Material)", "Mide la entrega en tiempo y forma de los recursos de estudio y bibliografía."],
       ["CAT (Criterio de Evaluación)", "Evalúa la transparencia y coherencia de los criterios de corrección."],
       ["TCE (Empatía y Sugerencias)", "Mide la apertura del docente hacia las inquietudes y respuesta ante imprevistos."],
-      ["Rango de valores", "1.0 a 5.0"]
+      ["Escala", "1.0 a 5.0"]
     ];
 
     const worksheet = XLSX.utils.aoa_to_sheet([...metadata, ...dataToExport, ...glossary]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte_Total_AT");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Log_Excelencia");
+    XLSX.writeFile(workbook, `Log_Excelencia_AT_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+  };
 
-    const wscols = [
-      { wch: 15 }, { wch: 18 }, { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }
+  // Export Academic Summary (Consolidated Stats)
+  const handleExportAcademicSummaryExcel = () => {
+    if (loading || processedAcademic.length === 0) return;
+
+    const metadata = [
+      ["Reporte Estratégico de Calidad Educativa - Alternativa Tecnológica"],
+      [`Tipo: Resumen Consolidado de Cátedras`],
+      [`Fecha de Reporte: ${format(new Date(), 'dd/MM/yyyy')}`],
+      [""],
+      ["Carrera", "Cátedra / Materia", "Evaluaciones", "Promedio General", "Claridad (ICT)", "Material (NDC)", "Criterio (CAT)", "Empatía (TCE)"]
     ];
-    worksheet['!cols'] = wscols;
 
-    XLSX.writeFile(workbook, `Reporte_Excelencia_TOTAL_AT_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+    const dataToExport = processedAcademic.map(t => [
+      t.carrera,
+      t.catedra,
+      t.stats.count,
+      Math.round(t.stats.promedioGeneral * 10) / 10,
+      Math.round(t.stats.ict * 10) / 10,
+      Math.round(t.stats.ndc * 10) / 10,
+      Math.round(t.stats.cat * 10) / 10,
+      Math.round(t.stats.tce * 10) / 10
+    ]);
+
+    const worksheet = XLSX.utils.aoa_to_sheet([...metadata, ...dataToExport]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Resumen_Cátedras");
+    XLSX.writeFile(workbook, `Resumen_Cátedras_AT_${format(new Date(), 'yyyyMMdd')}.xlsx`);
   };
 
   // Glossary Component
@@ -489,8 +510,11 @@ export default function AdminDashboard() {
               <option value="Ingeniería en Sistemas de Información">Sistemas</option>
               <option value="Ingeniería Electrónica">Electrónica</option>
             </select>
+            <button className="glass-button" style={{ background: '#3f75ab', color: '#fff' }} onClick={handleExportAcademicSummaryExcel}>
+              <Download size={18} /> Exportar Resumen (.xlsx)
+            </button>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontWeight: '800', color: '#6b7280' }}>
-              Ordenar por:
+              Ordenar:
               <select className="glass-input" value={academicSortField} onChange={(e) => setAcademicSortField(e.target.value)} style={{ borderRadius: '1rem', padding: '8px 16px' }}>
                 <option value="catedra">Nombre</option>
                 <option value="stats.promedioGeneral">Promedio Gral</option>
@@ -509,9 +533,24 @@ export default function AdminDashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '2px solid #3f75ab' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Cátedra / Materia</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab' }}>Evals</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab' }}>Promedio</th>
+                  <th 
+                    style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab', cursor: 'pointer' }}
+                    onClick={() => { setAcademicSortField('catedra'); setAcademicSortOrder(academicSortOrder === 'asc' ? 'desc' : 'asc'); }}
+                  >
+                    Cátedra / Materia {academicSortField === 'catedra' && (academicSortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th 
+                    style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab', cursor: 'pointer' }}
+                    onClick={() => { setAcademicSortField('stats.count'); setAcademicSortOrder(academicSortOrder === 'asc' ? 'desc' : 'asc'); }}
+                  >
+                    Evals {academicSortField === 'stats.count' && (academicSortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th 
+                    style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab', cursor: 'pointer' }}
+                    onClick={() => { setAcademicSortField('stats.promedioGeneral'); setAcademicSortOrder(academicSortOrder === 'asc' ? 'desc' : 'asc'); }}
+                  >
+                    Promedio {academicSortField === 'stats.promedioGeneral' && (academicSortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Desglose de Calidad</th>
                 </tr>
               </thead>
@@ -587,13 +626,13 @@ export default function AdminDashboard() {
                 style={{ paddingLeft: '48px', width: '100%', borderRadius: '1rem' }} 
               />
             </div>
-            <select className="glass-input" value={evalFilterCarrera} onChange={(e) => setEvalFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '1rem' }}>
+            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '1rem' }}>
               <option value="">Todas las Carreras</option>
               <option value="Ingeniería en Sistemas de Información">Sistemas</option>
               <option value="Ingeniería Electrónica">Electrónica</option>
             </select>
-            <button className="glass-button" style={{ background: '#3f75ab', color: '#fff' }} onClick={handleExportAcademicExcel}>
-              <Download size={18} /> Exportar Log Completo (.xlsx)
+            <button className="glass-button" style={{ background: '#ef5f27', color: '#fff' }} onClick={handleExportAcademicExcel}>
+              <Download size={18} /> Exportar Log (.xlsx)
             </button>
           </div>
 
