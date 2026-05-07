@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Mesa de Entrada (Submissions)
+    match /submissions/{docId} {
+      allow read, write: if true;
+    }
+
+    // Excelencia Académica (Evaluaciones)
+    match /evaluaciones_excelencia/{docId} {
+      allow read, write: if true;
+    }
+
+    // Cátedras / Docentes
+    match /docentes/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

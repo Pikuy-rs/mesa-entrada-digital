@@ -1,5 +1,5 @@
-import { db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
 
 const COLLECTION_NAME = "submissions";
 
@@ -29,6 +29,18 @@ export const subscribeToSubmissions = (callback) => {
   }, (error) => {
     console.error("Error fetching submissions:", error);
   });
+};
+
+export const updateSubmissionStatus = async (id, newStatus) => {
+  try {
+    await updateDoc(doc(db, COLLECTION_NAME, id), {
+      status: newStatus
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating status: ", error);
+    return { success: false, error: error.message };
+  }
 };
 
 export const deleteSubmission = async (id) => {

@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Mesa de Entrada Digital | Alternativa Tecnológica",
+  title: "Gestión Estudiantil | Alternativa Tecnológica",
   description: "Plataforma de gestión académica directa para estudiantes de la UTN FRT",
   icons: {
     icon: '/logo-transparent.png',

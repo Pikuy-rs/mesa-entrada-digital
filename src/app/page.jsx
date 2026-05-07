@@ -1,12 +1,18 @@
 "use client";
+import React from 'react';
 import Header from '../components/Header';
 import ProcessInfographic from '../components/ProcessInfographic';
 import GalaQuote from '../components/GalaQuote';
 import SubmissionForm from '../components/SubmissionForm';
+import AcademicExcellence from '../components/AcademicExcellence';
+import Navbar from '../components/Navbar';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function Home() {
+  const [activeModule, setActiveModule] = React.useState('mesa');
+
   return (
     <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Animated Background Shapes */}
@@ -14,16 +20,40 @@ export default function Home() {
       <div className="shape shape-2"></div>
       <div className="shape shape-3"></div>
 
+      <Navbar activeModule={activeModule} setActiveModule={setActiveModule} />
+
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: '80px', zIndex: 1 }}>
         <Header />
         
-        <main className="container animate-fade-in-up delay-300" style={{ width: '100%', maxWidth: '1000px', zIndex: 10 }}>
-          <ProcessInfographic />
-          <GalaQuote />
-          <div style={{ marginTop: '40px' }}>
-            <SubmissionForm />
-          </div>
+        <main className="container" style={{ width: '100%', maxWidth: '1000px', zIndex: 10 }}>
+          <AnimatePresence mode="wait">
+            {activeModule === 'mesa' ? (
+              <motion.div
+                key="mesa"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                <ProcessInfographic />
+                <div id="mesa-entrada" style={{ marginTop: '40px' }}>
+                  <SubmissionForm />
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="excelencia"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                id="excelencia"
+              >
+                <AcademicExcellence />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
       </div>
       

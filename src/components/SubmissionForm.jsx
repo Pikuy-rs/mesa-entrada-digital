@@ -52,6 +52,8 @@ export default function SubmissionForm() {
     }
   };
 
+  const [showForm, setShowForm] = useState(false);
+
   if (status === 'success') {
     return (
       <div className="glass-panel animate-fade-in" style={{ padding: '40px', textAlign: 'center' }}>
@@ -66,6 +68,88 @@ export default function SubmissionForm() {
           onClick={() => setStatus('idle')}
         >
           Enviar nueva solicitud
+        </button>
+      </div>
+    );
+  }
+
+  if (!showForm) {
+    return (
+      <div style={{ textAlign: 'center', margin: '40px 0' }}>
+        <h2 style={{ 
+          fontSize: '3rem', 
+          fontWeight: '800', 
+          color: 'var(--color-primary)', 
+          marginBottom: '32px',
+          letterSpacing: '-0.02em'
+        }} className="text-gradient-primary">
+          Mesa de Entrada Digital
+        </h2>
+
+        {/* Mensaje Político de Gala - Versión Gran Formato */}
+        <div style={{ 
+          maxWidth: '900px', 
+          margin: '0 auto 60px auto', 
+          padding: '60px', 
+          background: '#ffffff', 
+          borderRadius: '2.5rem',
+          border: '3px solid #3f75ab',
+          textAlign: 'left',
+          boxShadow: '0 30px 60px rgba(0,0,0,0.12)',
+          position: 'relative'
+        }} className="animate-fade-in">
+          <div style={{ display: 'flex', gap: '50px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: '0 0 200px' }}>
+              <div style={{ width: '200px', height: '200px', borderRadius: '50%', overflow: 'hidden', border: '6px solid var(--color-primary)', boxShadow: '0 15px 30px rgba(63, 117, 171, 0.3)' }}>
+                <img src="/gala.png" alt="Gala Bórquez" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            </div>
+            <div style={{ flex: '1 1 500px' }}>
+              <p style={{ 
+                fontSize: '1.6rem', 
+                lineHeight: '1.4', 
+                color: '#000000', 
+                fontWeight: '700',
+                fontStyle: 'italic',
+                margin: '0 0 32px 0',
+                letterSpacing: '-0.01em'
+              }}>
+                "La gestión no es un favor, es un derecho. Entendemos la tecnología como la gran igualadora que nos permite acercar la facultad a cada estudiante, sin intermediarios ni punteros. Nuestra Mesa de Entrada Digital garantiza que tu esfuerzo académico sea lo único que importe. Estamos liderando el avance tecnológico para que tus derechos nunca más sean moneda de cambio."
+              </p>
+              <div>
+                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '1.5rem', fontWeight: '900' }}>Gala Bórquez</strong>
+                <span style={{ fontSize: '1.1rem', color: '#4b5563', fontWeight: '700' }}>Presidenta del Centro de Estudiantes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button 
+          className="glass-button" 
+          style={{ 
+            fontSize: '1.25rem', 
+            padding: '20px 48px', 
+            borderRadius: '1rem', 
+            background: '#3f75ab', 
+            color: '#fff', 
+            width: '100%', 
+            maxWidth: '400px',
+            boxShadow: '0 10px 25px rgba(63, 117, 171, 0.3)',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: '700',
+            transition: 'transform 0.2s, box-shadow 0.2s'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 15px 30px rgba(63, 117, 171, 0.4)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 10px 25px rgba(63, 117, 171, 0.3)';
+          }}
+          onClick={() => setShowForm(true)}
+        >
+          Inicia tu trámite
         </button>
       </div>
     );
