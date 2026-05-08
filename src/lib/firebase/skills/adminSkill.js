@@ -18,14 +18,19 @@ const SUBMISSIONS_COLLECTION = "submissions";
  */
 export const adminSkill = {
   /**
-   * Suscribirse a los trámites en tiempo real.
+   * Suscribirse a los trámites en tiempo real con manejo de errores.
    */
-  subscribeSubmissions(callback) {
+  subscribeSubmissions(callback, errorCallback) {
     const q = query(collection(db, SUBMISSIONS_COLLECTION), orderBy("createdAt", "desc"));
-    return onSnapshot(q, (snap) => {
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      callback(data);
-    });
+    return onSnapshot(q, 
+      (snap) => {
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(data);
+      },
+      (error) => {
+        if (errorCallback) errorCallback(error);
+      }
+    );
   },
 
   /**

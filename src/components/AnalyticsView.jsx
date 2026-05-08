@@ -128,8 +128,8 @@ export default function AnalyticsView({ submissions = [], evaluations = [] }) {
             <BarChart2 style={{ color: '#3f75ab' }} />
             <h3 style={{ margin: 0, fontWeight: '900', fontSize: '1.4rem' }}>Demanda Administrativa</h3>
           </div>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={demandData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontWeight: '700', fontSize: 12 }} />
@@ -162,13 +162,13 @@ export default function AnalyticsView({ submissions = [], evaluations = [] }) {
             </select>
           </div>
           
-          <div style={{ height: '300px' }}>
+          <div style={{ height: '300px', width: '100%' }}>
             {!selectedCatedra ? (
               <div style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#9ca3af', fontWeight: '700', border: '2px dashed #f3f4f6', borderRadius: '1rem' }}>
                 Seleccione una cátedra para visualizar la tendencia
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={academicTrendData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontWeight: '700', fontSize: 12 }} />

@@ -78,15 +78,24 @@ export default function AdminDashboard() {
     if (!user) return;
     
     setLoading(true);
+    let unsubscribeSub = null;
+
     const fetchData = async () => {
       try {
-        if (activeTab === 'submissions') {
-          const unsubscribe = adminSkill.subscribeSubmissions((data) => {
-            setSubmissions(data);
-            setLoading(false);
-          });
-          return unsubscribe;
-        } else if (activeTab === 'academic') {
+        if (activeTab === 'submissions' || activeTab === 'analytics') {
+          unsubscribeSub = adminSkill.subscribeSubmissions(
+            (data) => {
+              setSubmissions(data);
+              if (activeTab === 'submissions') setLoading(false);
+            },
+            (error) => {
+              console.error("Error en listener de trámites:", error);
+              setLoading(false);
+            }
+          );
+        }
+
+        if (activeTab === 'academic') {
           const data = await evaluacionSkill.getCatedrasWithStats();
           setAcademicStats(data);
           setLoading(false);
@@ -101,24 +110,17 @@ export default function AdminDashboard() {
           ]);
           setAcademicStats(stats);
           setAllEvaluations(evals);
-          // Submissions is real-time, but for analytics we ensure we have data
-          const unsubscribe = adminSkill.subscribeSubmissions((data) => {
-            setSubmissions(data);
-            setLoading(false);
-          });
-          return unsubscribe;
+          // setLoading se llama dentro del listener de submissions arriba
         }
       } catch (error) {
-        console.error("Error loading data:", error);
+        console.error("Error cargando datos:", error);
         setLoading(false);
       }
     };
     
-    const cleanupPromise = fetchData();
+    fetchData();
     return () => {
-      cleanupPromise.then(unsubscribe => {
-        if (typeof unsubscribe === 'function') unsubscribe();
-      });
+      if (unsubscribeSub) unsubscribeSub();
     };
   }, [user, activeTab]);
 
