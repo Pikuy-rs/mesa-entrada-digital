@@ -1,3 +1,4 @@
+"use client";
 import dynamic from 'next/dynamic';
 import AuthGuard from '../../components/AuthGuard';
 
@@ -7,10 +8,6 @@ const AdminDashboard = dynamic(
   () => import('../../components/AdminDashboard'),
   { ssr: false }
 );
-
-export const metadata = {
-  title: "Gestión | Alternativa Tecnológica",
-};
 
 export default function AdminPage() {
   return (
