@@ -64,6 +64,7 @@ export default function AdminDashboard({ user }) {
 
   // Fetch Data using Skills
   useEffect(() => {
+    if (!user) return;
     
     setLoading(true);
     let unsubscribeSub = null;
