@@ -26,10 +26,7 @@ import {
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
-export default function AdminDashboard() {
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  
+export default function AdminDashboard({ user }) {
   const [activeTab, setActiveTab] = useState('submissions'); 
   const [submissions, setSubmissions] = useState([]);
   const [academicStats, setAcademicStats] = useState([]);
@@ -64,18 +61,9 @@ export default function AdminDashboard() {
     localStorage.setItem('gala_filter_carrera', academicFilterCarrera);
   }, [academicFilterCarrera]);
 
-  // Auth Listener
-  useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges((currentUser) => {
-      setUser(currentUser);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Fetch Data using Skills
   useEffect(() => {
-    if (!user) return;
     
     setLoading(true);
     let unsubscribeSub = null;
@@ -306,17 +294,6 @@ export default function AdminDashboard() {
     </div>
   );
 
-  if (authLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-        <Loader2 className="animate-spin" size={48} color="#3f75ab" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AdminLogin />;
-  }
 
   return (
     <div className="container" style={{ maxWidth: '1400px', padding: '40px 20px' }}>
