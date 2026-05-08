@@ -122,13 +122,27 @@ export default function AdminDashboard() {
   };
 
   const processedAcademic = useMemo(() => {
-    // Debug de datos recibidos
-    console.log('Stats Consolidadas:', academicStats);
+    // Escaneo de trazabilidad en frontend
+    console.log('[Dashboard] Datos para tabla academic:', academicStats);
     
-    let filtered = academicStats.filter(t => (t.stats?.count || 0) > 0);
-    if (academicFilterCarrera) filtered = filtered.filter(t => t.carrera === academicFilterCarrera);
-    if (academicSearch) filtered = filtered.filter(t => (t.catedraNombre || t.catedra || "").toLowerCase().includes(academicSearch.toLowerCase()));
-    return sortData(filtered, academicSortField, academicSortOrder);
+    if (!academicStats || academicStats.length === 0) return [];
+
+    let filtered = academicStats.filter(t => (t.stats?.count || t.evaluacionesCount || 0) > 0);
+    
+    if (academicFilterCarrera) {
+      filtered = filtered.filter(t => t.carrera === academicFilterCarrera);
+    }
+    
+    if (academicSearch) {
+      const searchLower = academicSearch.toLowerCase();
+      filtered = filtered.filter(t => 
+        (t.catedraNombre || t.catedra || "").toLowerCase().includes(searchLower)
+      );
+    }
+    
+    const sorted = sortData(filtered, academicSortField, academicSortOrder);
+    console.log('[Dashboard] Cátedras tras filtros:', sorted.length);
+    return sorted;
   }, [academicStats, academicFilterCarrera, academicSearch, academicSortField, academicSortOrder]);
 
   const processedEvaluations = useMemo(() => {

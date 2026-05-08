@@ -112,72 +112,97 @@ export const evaluacionSkill = {
   },
 
   /**
-   * Obtiene estadísticas consolidadas por cátedra.
+   * Obtiene estadísticas consolidadas por cátedra con trazabilidad profunda.
    */
   async getCatedrasWithStats() {
     try {
+      console.log("Iniciando escaneo de trazabilidad académica...");
       await this.autoSeed();
+      
       const [catSnap, evalSnap] = await Promise.all([
         getDocs(collection(db, CATEDRAS_COLLECTION)),
         getDocs(collection(db, EVALUATIONS_COLLECTION))
       ]);
 
-      const catedras = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const evaluations = evalSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const rawCatedras = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const rawEvaluations = evalSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Agrupación principal por ID de Cátedra
-      const grouped = evaluations.reduce((acc, curr) => {
-        const id = curr.catedraId || curr.teacherId;
-        if (!id) return acc;
-        if (!acc[id]) acc[id] = [];
-        acc[id].push(curr);
-        return acc;
-      }, {});
+      console.log(`Datos crudos: ${rawCatedras.length} cátedras, ${rawEvaluations.length} evaluaciones.`);
 
-      const knownIds = new Set(catedras.map(c => c.id));
+      // Mapa de consolidación por NOMBRE (para evitar fallos de ID)
+      const statsMap = {};
 
-      // Integrar cátedras detectadas en evaluaciones que no figuran en la colección maestra
-      evaluations.forEach(e => {
-        const id = e.catedraId || e.teacherId;
-        if (id && !knownIds.has(id)) {
-          catedras.push({
-            id: id,
-            catedra: e.catedra || 'Cátedra Desconocida',
-            carrera: e.carrera || 'N/A',
-            nombre: 'Cátedra Detectada'
-          });
-          knownIds.add(id);
+      // 1. Inicializar mapa con cátedras conocidas
+      rawCatedras.forEach(c => {
+        const key = c.catedra.trim().toLowerCase();
+        if (!statsMap[key]) {
+          statsMap[key] = {
+            id: c.id,
+            catedraId: c.id,
+            catedra: c.catedra,
+            catedraNombre: c.catedra,
+            carrera: c.carrera || 'N/A',
+            evaluacionesCount: 0,
+            sumICT: 0, sumNDC: 0, sumCAT: 0, sumTCE: 0,
+            feedback: []
+          };
         }
       });
 
-      return catedras.map(cat => {
-        const evals = grouped[cat.id] || [];
-        const count = evals.length;
+      // 2. Procesar evaluaciones y agrupar por nombre (o ID si coincide)
+      rawEvaluations.forEach(e => {
+        const key = (e.catedra || "").trim().toLowerCase();
+        if (!key) return;
 
-        const ict = count > 0 ? evals.reduce((a, c) => a + (c.ict || 0), 0) / count : 0;
-        const ndc = count > 0 ? evals.reduce((a, c) => a + (c.ndc || 0), 0) / count : 0;
-        const cat_score = count > 0 ? evals.reduce((a, c) => a + (c.cat || 0), 0) / count : 0;
-        const tce = count > 0 ? evals.reduce((a, c) => a + (c.tce || 0), 0) / count : 0;
-        const promedioGeneral = count > 0 ? (ict + ndc + cat_score + tce) / 4 : 0;
+        // Si la cátedra no existe en el mapa, la creamos (cátedra detectada)
+        if (!statsMap[key]) {
+          statsMap[key] = {
+            id: e.catedraId || e.teacherId || `gen_${key}`,
+            catedraId: e.catedraId || e.teacherId || `gen_${key}`,
+            catedra: e.catedra,
+            catedraNombre: e.catedra,
+            carrera: e.carrera || 'N/A',
+            evaluacionesCount: 0,
+            sumICT: 0, sumNDC: 0, sumCAT: 0, sumTCE: 0,
+            feedback: []
+          };
+        }
+
+        const s = statsMap[key];
+        s.evaluacionesCount++;
+        s.sumICT += (e.ict || 0);
+        s.sumNDC += (e.ndc || 0);
+        s.sumCAT += (e.cat || 0);
+        s.sumTCE += (e.tce || 0);
+        if (e.accionExcelencia) s.feedback.push(e.accionExcelencia);
+      });
+
+      // 3. Finalizar promedios y retornar array
+      const result = Object.values(statsMap).map(s => {
+        const count = s.evaluacionesCount || 1;
+        const ict = s.sumICT / count;
+        const ndc = s.sumNDC / count;
+        const cat = s.sumCAT / count;
+        const tce = s.sumTCE / count;
+        const promedioGeneral = (ict + ndc + cat + tce) / 4;
 
         return {
-          id: cat.id,
-          catedraId: cat.id,
-          catedra: cat.catedra,
-          catedraNombre: cat.catedra,
-          carrera: cat.carrera,
-          evaluacionesCount: count,
-          promedioGeneral: promedioGeneral,
-          // Compatibilidad con UI actual
+          ...s,
+          promedioGeneral,
           stats: {
-            ict, ndc, cat: cat_score, tce, promedioGeneral, count,
-            feedback: evals.map(e => e.accionExcelencia).filter(Boolean)
+            ict, ndc, cat, tce, 
+            promedioGeneral, 
+            count: s.evaluacionesCount,
+            feedback: s.feedback
           },
-          desglose: { ICT: ict, NDC: ndc, CAT: cat_score, TCE: tce }
+          desglose: { ICT: ict, NDC: ndc, CAT: cat, TCE: tce }
         };
       });
+
+      console.log("Escaneo completado. Cátedras procesadas:", result.length);
+      return result;
     } catch (error) {
-      console.error("Error en getCatedrasWithStats:", error);
+      console.error("CRITICAL ERROR en getCatedrasWithStats:", error);
       return [];
     }
   }
