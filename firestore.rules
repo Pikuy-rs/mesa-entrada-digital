@@ -1,19 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Mesa de Entrada (Submissions)
-    match /submissions/{docId} {
-      allow read, write: if true;
+    
+    // Reglas para la colección 'submissions' (Mesa de Entrada)
+    match /submissions/{submissionId} {
+      allow create: if true; // Alumnos pueden enviar trámites
+      allow read, write: if request.auth != null; // Solo Admin Rafael
     }
 
-    // Excelencia Académica (Evaluaciones)
-    match /evaluaciones_excelencia/{docId} {
-      allow read, write: if true;
+    // Reglas para 'evaluaciones_excelencia'
+    match /evaluaciones_excelencia/{evaluationId} {
+      allow create: if true; // Alumnos pueden evaluar
+      allow read, write: if request.auth != null; // Solo Admin Rafael
     }
 
-    // Cátedras / Docentes
-    match /docentes/{docId} {
-      allow read, write: if true;
+    // Reglas para 'catedras'
+    match /catedras/{catedraId} {
+      allow read: if true; // Lectura pública para selectores
+      allow write: if request.auth != null; // Solo Admin Rafael
+    }
+    
+    // Denegar todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

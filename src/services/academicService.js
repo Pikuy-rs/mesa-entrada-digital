@@ -11,78 +11,48 @@ import {
   doc
 } from "firebase/firestore";
 
-const TEACHERS_COLLECTION = "docentes";
+const CATEDRAS_COLLECTION = "catedras";
 
-export const getAllTeachers = async () => {
+export const getAllCatedras = async () => {
   try {
-    const querySnapshot = await getDocs(query(collection(db, TEACHERS_COLLECTION), orderBy("catedra")));
-    const teachers = [];
+    const querySnapshot = await getDocs(query(collection(db, CATEDRAS_COLLECTION), orderBy("catedra")));
+    const catedras = [];
     querySnapshot.forEach((doc) => {
-      teachers.push({ id: doc.id, ...doc.data() });
+      catedras.push({ id: doc.id, ...doc.data() });
     });
-    return teachers;
+    return catedras;
   } catch (error) {
-    console.error("Error getting all teachers:", error);
     return [];
   }
 };
 
-export const searchTeachers = async (searchTerm) => {
-  if (!searchTerm || searchTerm.length < 2) return [];
-  
+export const submitEvaluation = async (catedraId, evaluationData, catedraObj = null) => {
   try {
-    const q = query(
-      collection(db, TEACHERS_COLLECTION),
-      orderBy("nombre"),
-      limit(10)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    const teachers = [];
-    const searchLower = searchTerm.toLowerCase();
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.nombre.toLowerCase().includes(searchLower) || (data.catedra && data.catedra.toLowerCase().includes(searchLower))) {
-        teachers.push({ id: doc.id, ...data });
-      }
-    });
-    
-    return teachers;
-  } catch (error) {
-    console.error("Error searching teachers:", error);
-    return [];
-  }
-};
+    let finalCatedraId = catedraId;
 
-export const submitEvaluation = async (teacherId, evaluationData, teacherObj = null) => {
-  try {
-    let finalTeacherId = teacherId;
-
-    // Si el ID es virtual, creamos el registro del docente en Firestore en este momento
-    if (typeof teacherId === 'string' && teacherId.startsWith('v_') && teacherObj) {
-      const teacherDoc = await addDoc(collection(db, TEACHERS_COLLECTION), {
-        nombre: teacherObj.nombre,
-        catedra: teacherObj.catedra,
-        carrera: teacherObj.carrera
+    // Si el ID es virtual, creamos el registro de la cátedra en Firestore
+    if (typeof catedraId === 'string' && catedraId.startsWith('v_') && catedraObj) {
+      const catedraDoc = await addDoc(collection(db, CATEDRAS_COLLECTION), {
+        nombre: catedraObj.nombre || 'Cátedra General',
+        catedra: catedraObj.catedra,
+        carrera: catedraObj.carrera
       });
-      finalTeacherId = teacherDoc.id;
+      finalCatedraId = catedraDoc.id;
     }
 
     // Guardar en la colección plana de evaluaciones para el Admin
     const evaluationsRef = collection(db, "evaluaciones_excelencia");
     await addDoc(evaluationsRef, {
       ...evaluationData,
-      teacherId: finalTeacherId,
-      teacherName: teacherObj?.nombre || 'Cátedra General',
-      catedra: teacherObj?.catedra || 'N/A',
-      carrera: teacherObj?.carrera || 'N/A',
+      teacherId: finalCatedraId, // Mantengo teacherId por compatibilidad en la base de datos si es necesario, pero conceptualmente es catedraId
+      catedraId: finalCatedraId,
+      catedra: catedraObj?.catedra || 'N/A',
+      carrera: catedraObj?.carrera || 'N/A',
       createdAt: serverTimestamp(),
     });
     
     return { success: true };
   } catch (error) {
-    console.error("Error submitting evaluation:", error);
     return { success: false, error: error.message };
   }
 };
@@ -97,95 +67,63 @@ export const getAllEvaluations = async () => {
     });
     return evals;
   } catch (error) {
-    console.error("Error getting all evaluations:", error);
     return [];
   }
 };
 
-export const getTeacherEvaluations = async (teacherId) => {
+export const getAllCatedrasWithStats = async () => {
   try {
-    const q = query(
-      collection(db, "evaluaciones_excelencia"), 
-      where("teacherId", "==", teacherId),
-      orderBy("createdAt", "desc")
-    );
-    
-    const querySnapshot = await getDocs(q);
-    const evaluations = [];
-    querySnapshot.forEach((doc) => {
-      evaluations.push({ id: doc.id, ...doc.data() });
-    });
-    
-    return evaluations;
-  } catch (error) {
-    console.error("Error fetching evaluations:", error);
-    return [];
-  }
-};
-
-export const getAllTeachersWithStats = async () => {
-  try {
-    // 1. Fetch all teachers and all evaluations in parallel
-    const [teachersSnapshot, evalsSnapshot] = await Promise.all([
-      getDocs(collection(db, TEACHERS_COLLECTION)),
+    const [catedrasSnapshot, evalsSnapshot] = await Promise.all([
+      getDocs(collection(db, CATEDRAS_COLLECTION)),
       getDocs(collection(db, "evaluaciones_excelencia"))
     ]);
 
-    const teachers = teachersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const catedras = catedrasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const allEvals = evalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // 2. Group evaluations by teacherId
-    const evalsByTeacher = allEvals.reduce((acc, curr) => {
-      const tid = curr.teacherId;
-      if (!acc[tid]) acc[tid] = [];
-      acc[tid].push(curr);
+    const evalsByCatedra = allEvals.reduce((acc, curr) => {
+      const cid = curr.catedraId || curr.teacherId; // Fallback to teacherId
+      if (!acc[cid]) acc[cid] = [];
+      acc[cid].push(curr);
       return acc;
     }, {});
 
-    // 3. Calculate stats for each teacher
-    return teachers.map(teacher => {
-      const teacherEvals = evalsByTeacher[teacher.id] || [];
-      const validEvaluations = teacherEvals.filter(e => !e.isOutlier);
+    return catedras.map(cat => {
+      const catedraEvals = evalsByCatedra[cat.id] || [];
       
-      const stats = validEvaluations.length > 0 ? {
-        ict: validEvaluations.reduce((acc, curr) => acc + curr.ict, 0) / validEvaluations.length,
-        ndc: validEvaluations.reduce((acc, curr) => acc + curr.ndc, 0) / validEvaluations.length,
-        cat: validEvaluations.reduce((acc, curr) => acc + curr.cat, 0) / validEvaluations.length,
-        tce: validEvaluations.reduce((acc, curr) => acc + curr.tce, 0) / validEvaluations.length,
-        promedioGeneral: (validEvaluations.reduce((acc, curr) => acc + curr.ict + curr.ndc + curr.cat + curr.tce, 0) / (validEvaluations.length * 4)),
-        count: validEvaluations.length,
-        outlierCount: teacherEvals.length - validEvaluations.length
-      } : { ict: 0, ndc: 0, cat: 0, tce: 0, promedioGeneral: 0, count: 0, outlierCount: teacherEvals.length };
+      const stats = catedraEvals.length > 0 ? {
+        ict: catedraEvals.reduce((acc, curr) => acc + (curr.ict || 0), 0) / catedraEvals.length,
+        ndc: catedraEvals.reduce((acc, curr) => acc + (curr.ndc || 0), 0) / catedraEvals.length,
+        cat: catedraEvals.reduce((acc, curr) => acc + (curr.cat || 0), 0) / catedraEvals.length,
+        tce: catedraEvals.reduce((acc, curr) => acc + (curr.tce || 0), 0) / catedraEvals.length,
+        promedioGeneral: (catedraEvals.reduce((acc, curr) => acc + (curr.ict || 0) + (curr.ndc || 0) + (curr.cat || 0) + (curr.tce || 0), 0) / (catedraEvals.length * 4)),
+        count: catedraEvals.length,
+        feedback: catedraEvals.map(e => e.accionExcelencia).filter(Boolean)
+      } : { ict: 0, ndc: 0, cat: 0, tce: 0, promedioGeneral: 0, count: 0, feedback: [] };
 
       return {
-        ...teacher,
+        ...cat,
         stats
       };
     });
   } catch (error) {
-    console.error("Error getting all teachers with stats:", error);
     return [];
   }
 };
 
-export const seedTeachers = async () => {
+export const seedCatedras = async () => {
   const sistemasSubjects = [
-    // Primer Nivel
     "Análisis Matemático I", "Álgebra y Geometría Analítica", "Física I", "Inglés I", 
     "Lógica y Estructuras Discretas", "Algoritmos y Estructuras de Datos", 
     "Arquitectura de Computadoras", "Sistemas y Procesos de Negocio",
-    // Segundo Nivel
     "Análisis Matemático II", "Física II", "Ingeniería y Sociedad", "Inglés II", 
     "Sintaxis y Semántica de los Lenguajes", "Paradigmas de Programación", 
     "Sistemas Operativos", "Análisis de Sistemas de Información",
-    // Tercer Nivel
     "Probabilidad y Estadística", "Economía", "Bases de Datos", "Desarrollo de Software", 
     "Comunicación de Datos", "Análisis Numérico", "Diseño de Sistemas de Información",
-    // Cuarto Nivel
     "Legislación", "Ingeniería y Calidad de Software", "Redes de Datos", 
     "Investigación Operativa", "Simulación", "Tecnologías para la automatización", 
     "Administración de Sistemas de Información",
-    // Quinto Nivel
     "Inteligencia Artificial", "Ciencia de Datos", "Sistemas de Gestión", 
     "Gestión Gerencial", "Seguridad en los Sistemas de Información", "Proyecto Final"
   ];
@@ -200,26 +138,22 @@ export const seedTeachers = async () => {
   ];
 
   try {
-    // Seed Sistemas
     for (const subject of sistemasSubjects) {
-      await addDoc(collection(db, TEACHERS_COLLECTION), {
+      await addDoc(collection(db, CATEDRAS_COLLECTION), {
         nombre: "Cátedra General",
         catedra: subject,
         carrera: "Ingeniería en Sistemas de Información"
       });
     }
 
-    // Seed Electrónica
     for (const subject of electronicaSubjects) {
-      await addDoc(collection(db, TEACHERS_COLLECTION), {
+      await addDoc(collection(db, CATEDRAS_COLLECTION), {
         nombre: "Cátedra General",
         catedra: subject,
         carrera: "Ingeniería Electrónica"
       });
     }
-
-    console.log("Seeding complete for Sistemas and Electrónica!");
   } catch (error) {
-    console.error("Error seeding teachers:", error);
+    // Silent error
   }
 };

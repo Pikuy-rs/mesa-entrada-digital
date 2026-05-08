@@ -8,11 +8,10 @@ export const addSubmission = async (data) => {
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {
       ...data,
       createdAt: serverTimestamp(),
-      status: 'pending' // Default status for new requests
+      status: 'pending'
     });
     return { success: true, id: docRef.id };
   } catch (error) {
-    console.error("Error adding submission: ", error);
     return { success: false, error: error.message };
   }
 };
@@ -27,7 +26,7 @@ export const subscribeToSubmissions = (callback) => {
     });
     callback(submissions);
   }, (error) => {
-    console.error("Error fetching submissions:", error);
+    // Handle error silently or via callback
   });
 };
 
@@ -38,7 +37,6 @@ export const updateSubmissionStatus = async (id, newStatus) => {
     });
     return { success: true };
   } catch (error) {
-    console.error("Error updating status: ", error);
     return { success: false, error: error.message };
   }
 };
@@ -48,7 +46,6 @@ export const deleteSubmission = async (id) => {
     await deleteDoc(doc(db, COLLECTION_NAME, id));
     return { success: true };
   } catch (error) {
-    console.error("Error deleting submission: ", error);
     return { success: false, error: error.message };
   }
 };

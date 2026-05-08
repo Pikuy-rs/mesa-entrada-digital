@@ -9,7 +9,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
-export default function TeacherRadarChart({ data }) {
+export default function CatedraRadarChart({ data }) {
   // data should be an array like:
   // [
   //   { subject: 'Claridad', A: 4.5, fullMark: 5 },
@@ -35,7 +35,7 @@ export default function TeacherRadarChart({ data }) {
             tick={{ fill: '#9ca3af', fontSize: 10 }}
           />
           <Radar
-            name="Docente"
+            name="Cátedra"
             dataKey="A"
             stroke="var(--color-primary)"
             fill="var(--color-primary)"
