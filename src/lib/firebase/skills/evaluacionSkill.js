@@ -125,17 +125,18 @@ export const evaluacionSkill = {
       const catedras = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const evaluations = evalSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+      // Agrupación principal por ID de Cátedra
       const grouped = evaluations.reduce((acc, curr) => {
         const id = curr.catedraId || curr.teacherId;
+        if (!id) return acc;
         if (!acc[id]) acc[id] = [];
         acc[id].push(curr);
         return acc;
       }, {});
 
-      // Crear un set de IDs de cátedras conocidas
       const knownIds = new Set(catedras.map(c => c.id));
 
-      // Agregar cátedras "virtuales" detectadas en evaluaciones que no están en la lista principal
+      // Integrar cátedras detectadas en evaluaciones que no figuran en la colección maestra
       evaluations.forEach(e => {
         const id = e.catedraId || e.teacherId;
         if (id && !knownIds.has(id)) {
@@ -153,17 +154,27 @@ export const evaluacionSkill = {
         const evals = grouped[cat.id] || [];
         const count = evals.length;
 
-        const stats = {
-          ict: count > 0 ? evals.reduce((a, c) => a + (c.ict || 0), 0) / count : 0,
-          ndc: count > 0 ? evals.reduce((a, c) => a + (c.ndc || 0), 0) / count : 0,
-          cat: count > 0 ? evals.reduce((a, c) => a + (c.cat || 0), 0) / count : 0,
-          tce: count > 0 ? evals.reduce((a, c) => a + (c.tce || 0), 0) / count : 0,
-          promedioGeneral: count > 0 ? evals.reduce((a, c) => a + (c.ict || 0) + (c.ndc || 0) + (c.cat || 0) + (c.tce || 0), 0) / (count * 4) : 0,
-          count,
-          feedback: evals.map(e => e.accionExcelencia).filter(Boolean)
-        };
+        const ict = count > 0 ? evals.reduce((a, c) => a + (c.ict || 0), 0) / count : 0;
+        const ndc = count > 0 ? evals.reduce((a, c) => a + (c.ndc || 0), 0) / count : 0;
+        const cat_score = count > 0 ? evals.reduce((a, c) => a + (c.cat || 0), 0) / count : 0;
+        const tce = count > 0 ? evals.reduce((a, c) => a + (c.tce || 0), 0) / count : 0;
+        const promedioGeneral = count > 0 ? (ict + ndc + cat_score + tce) / 4 : 0;
 
-        return { ...cat, stats };
+        return {
+          id: cat.id,
+          catedraId: cat.id,
+          catedra: cat.catedra,
+          catedraNombre: cat.catedra,
+          carrera: cat.carrera,
+          evaluacionesCount: count,
+          promedioGeneral: promedioGeneral,
+          // Compatibilidad con UI actual
+          stats: {
+            ict, ndc, cat: cat_score, tce, promedioGeneral, count,
+            feedback: evals.map(e => e.accionExcelencia).filter(Boolean)
+          },
+          desglose: { ICT: ict, NDC: ndc, CAT: cat_score, TCE: tce }
+        };
       });
     } catch (error) {
       console.error("Error en getCatedrasWithStats:", error);

@@ -122,9 +122,12 @@ export default function AdminDashboard() {
   };
 
   const processedAcademic = useMemo(() => {
-    let filtered = academicStats.filter(t => t.stats.count > 0);
+    // Debug de datos recibidos
+    console.log('Stats Consolidadas:', academicStats);
+    
+    let filtered = academicStats.filter(t => (t.stats?.count || 0) > 0);
     if (academicFilterCarrera) filtered = filtered.filter(t => t.carrera === academicFilterCarrera);
-    if (academicSearch) filtered = filtered.filter(t => t.catedra.toLowerCase().includes(academicSearch.toLowerCase()));
+    if (academicSearch) filtered = filtered.filter(t => (t.catedraNombre || t.catedra || "").toLowerCase().includes(academicSearch.toLowerCase()));
     return sortData(filtered, academicSortField, academicSortOrder);
   }, [academicStats, academicFilterCarrera, academicSearch, academicSortField, academicSortOrder]);
 
@@ -430,22 +433,22 @@ export default function AdminDashboard() {
                   return (
                     <tr key={t.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                       <td style={{ padding: '24px' }}>
-                        <div style={{ fontWeight: '900', color: '#000', fontSize: '1.1rem' }}>{t.catedra}</div>
+                        <div style={{ fontWeight: '900', color: '#000', fontSize: '1.1rem' }}>{t.catedraNombre || t.catedra}</div>
                         <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>{t.carrera}</div>
                       </td>
-                      <td style={{ padding: '24px', textAlign: 'center', fontWeight: '900' }}>{t.stats.count}</td>
+                      <td style={{ padding: '24px', textAlign: 'center', fontWeight: '900' }}>{t.evaluacionesCount || t.stats?.count || 0}</td>
                       <td style={{ padding: '24px', textAlign: 'center' }}>
                         <span style={{ background: statusInfo.bg, color: statusInfo.text, padding: '8px 16px', borderRadius: '2rem', fontWeight: '900', border: `2px solid ${statusInfo.text}20` }}>
-                          {formatMetric(t.stats.promedioGeneral)}
+                          {formatMetric(t.promedioGeneral || t.stats?.promedioGeneral)}
                         </span>
                       </td>
                       <td style={{ padding: '24px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                           {[
-                            { l: 'ICT', v: t.stats.ict },
-                            { l: 'NDC', v: t.stats.ndc },
-                            { l: 'CAT', v: t.stats.cat },
-                            { l: 'TCE', v: t.stats.tce }
+                            { l: 'ICT', v: t.desglose?.ICT || t.stats?.ict },
+                            { l: 'NDC', v: t.desglose?.NDC || t.stats?.ndc },
+                            { l: 'CAT', v: t.desglose?.CAT || t.stats?.cat },
+                            { l: 'TCE', v: t.desglose?.TCE || t.stats?.tce }
                           ].map(m => {
                             const mStatus = getInstitutionalStatus(m.v);
                             return (
