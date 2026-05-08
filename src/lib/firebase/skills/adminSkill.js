@@ -87,8 +87,8 @@ export const adminSkill = {
   calculateSLA(records) {
     const resolved = records.filter(r => 
       r.status === 'completed' && 
-      r.createdAt?.toDate && 
-      r.completedAt?.toDate
+      typeof r.createdAt?.toDate === 'function' && 
+      typeof r.completedAt?.toDate === 'function'
     );
 
     if (resolved.length === 0) return "Sin datos";

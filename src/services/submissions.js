@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, deleteField } from "firebase/firestore";
 
 const COLLECTION_NAME = "submissions";
 
@@ -32,9 +32,13 @@ export const subscribeToSubmissions = (callback) => {
 
 export const updateSubmissionStatus = async (id, newStatus) => {
   try {
-    await updateDoc(doc(db, COLLECTION_NAME, id), {
-      status: newStatus
-    });
+    const updateData = { status: newStatus };
+    if (newStatus === 'completed') {
+      updateData.completedAt = serverTimestamp();
+    } else {
+      updateData.completedAt = deleteField();
+    }
+    await updateDoc(doc(db, COLLECTION_NAME, id), updateData);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
