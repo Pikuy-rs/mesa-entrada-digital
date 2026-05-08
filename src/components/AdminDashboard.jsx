@@ -160,6 +160,14 @@ export default function AdminDashboard() {
     return sorted;
   }, [academicStats, academicFilterCarrera, academicSearch, academicSortField, academicSortOrder]);
 
+  const kpisSubmissions = useMemo(() => {
+    const total = submissions.length;
+    const completed = submissions.filter(s => s.status === 'completed').length;
+    const tasa = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
+    const sla = adminSkill.calculateSLA(submissions);
+    return { total, tasa, sla };
+  }, [submissions]);
+
   const processedEvaluations = useMemo(() => {
     let filtered = allEvaluations;
     if (academicFilterCarrera) filtered = filtered.filter(e => e.carrera === academicFilterCarrera);
@@ -364,6 +372,42 @@ export default function AdminDashboard() {
       {/* Views */}
       {activeTab === 'submissions' && (
         <div className="animate-fade-in">
+          {/* KPI Cards Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ background: '#3f75ab15', padding: '10px', borderRadius: '1rem', color: '#3f75ab' }}>
+                  <Inbox size={24} />
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Histórico</span>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: '950', color: '#1f2937' }}>{kpisSubmissions.total}</div>
+              <div style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '700' }}>Trámites Recibidos</div>
+            </div>
+
+            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ background: '#10b98115', padding: '10px', borderRadius: '1rem', color: '#10b981' }}>
+                  <CheckCircle2 size={24} />
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Eficiencia</span>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: '950', color: '#1f2937' }}>{kpisSubmissions.tasa}%</div>
+              <div style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '700' }}>Tasa de Resolución</div>
+            </div>
+
+            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ background: '#3f75ab15', padding: '10px', borderRadius: '1rem', color: '#3f75ab' }}>
+                  <Clock size={24} />
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>SLA Gestión</span>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: '950', color: '#3f75ab' }}>{kpisSubmissions.sla}</div>
+              <div style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '700' }}>Tiempo de Respuesta</div>
+            </div>
+          </div>
+
           <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
             <div style={{ flex: '1 1 300px', position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />

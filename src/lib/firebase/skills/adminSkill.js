@@ -7,7 +7,8 @@ import {
   deleteDoc, 
   doc, 
   updateDoc,
-  serverTimestamp 
+  serverTimestamp,
+  deleteField 
 } from "firebase/firestore";
 
 const SUBMISSIONS_COLLECTION = "submissions";
@@ -35,6 +36,8 @@ export const adminSkill = {
       const updateData = { status };
       if (status === 'completed') {
         updateData.completedAt = serverTimestamp();
+      } else {
+        updateData.completedAt = deleteField();
       }
       await updateDoc(doc(db, SUBMISSIONS_COLLECTION, id), updateData);
       return { success: true };
@@ -71,5 +74,35 @@ export const adminSkill = {
         Estado: r.status || 'N/A',
         Descripción: r.descripcion || 'N/A'
       }));
+  },
+
+  /**
+   * Calcula el SLA (Tiempo Promedio de Resolución) de los trámites.
+   */
+  calculateSLA(records) {
+    const resolved = records.filter(r => 
+      r.status === 'completed' && 
+      r.createdAt?.toDate && 
+      r.completedAt?.toDate
+    );
+
+    if (resolved.length === 0) return "Sin datos";
+
+    const totalHours = resolved.reduce((acc, curr) => {
+      const start = curr.createdAt.toDate();
+      const end = curr.completedAt.toDate();
+      const diff = (end - start) / (1000 * 60 * 60);
+      return acc + diff;
+    }, 0);
+
+    const averageHours = totalHours / resolved.length;
+
+    if (averageHours < 24) {
+      return `${Math.round(averageHours)} Horas`;
+    } else {
+      const days = Math.floor(averageHours / 24);
+      const remainingHours = Math.round(averageHours % 24);
+      return `${days} ${days === 1 ? 'Día' : 'Días'}${remainingHours > 0 ? ` y ${remainingHours}h` : ''}`;
+    }
   }
 };
