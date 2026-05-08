@@ -6,6 +6,7 @@ import { logoutAdmin, subscribeToAuthChanges } from '@/services/auth';
 import { getAllEvaluations } from '@/services/academicService';
 import { getInstitutionalStatus, formatMetric } from '@/lib/utils';
 import AdminLogin from './AdminLogin';
+import AnalyticsView from './AnalyticsView';
 import { 
   Download, 
   Search, 
@@ -19,7 +20,8 @@ import {
   CheckCircle2,
   Clock,
   MessageSquare,
-  Loader2
+  Loader2,
+  TrendingUp
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
@@ -76,32 +78,48 @@ export default function AdminDashboard() {
     if (!user) return;
     
     setLoading(true);
-    if (activeTab === 'submissions') {
-      const unsubscribe = adminSkill.subscribeSubmissions((data) => {
-        setSubmissions(data);
-        setLoading(false);
-      });
-      return () => unsubscribe();
-    } else if (activeTab === 'academic') {
-      const fetchAcademic = async () => {
-        const data = await evaluacionSkill.getCatedrasWithStats();
-        setAcademicStats(data);
-        setLoading(false);
-      };
-      fetchAcademic();
-    } else if (activeTab === 'evaluations') {
-      const fetchEvals = async () => {
-        try {
+    const fetchData = async () => {
+      try {
+        if (activeTab === 'submissions') {
+          const unsubscribe = adminSkill.subscribeSubmissions((data) => {
+            setSubmissions(data);
+            setLoading(false);
+          });
+          return unsubscribe;
+        } else if (activeTab === 'academic') {
+          const data = await evaluacionSkill.getCatedrasWithStats();
+          setAcademicStats(data);
+          setLoading(false);
+        } else if (activeTab === 'evaluations') {
           const evaluationsData = await getAllEvaluations();
           setAllEvaluations(evaluationsData);
-        } catch (error) {
-          console.error("Error al cargar evaluaciones:", error);
-        } finally {
           setLoading(false);
+        } else if (activeTab === 'analytics') {
+          const [stats, evals] = await Promise.all([
+            evaluacionSkill.getCatedrasWithStats(),
+            getAllEvaluations()
+          ]);
+          setAcademicStats(stats);
+          setAllEvaluations(evals);
+          // Submissions is real-time, but for analytics we ensure we have data
+          const unsubscribe = adminSkill.subscribeSubmissions((data) => {
+            setSubmissions(data);
+            setLoading(false);
+          });
+          return unsubscribe;
         }
-      };
-      fetchEvals();
-    }
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setLoading(false);
+      }
+    };
+    
+    const cleanupPromise = fetchData();
+    return () => {
+      cleanupPromise.then(unsubscribe => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      });
+    };
   }, [user, activeTab]);
 
   const sortData = (data, field, order) => {
@@ -316,7 +334,8 @@ export default function AdminDashboard() {
         {[
           { id: 'submissions', label: 'Mesa de Entrada', icon: Inbox },
           { id: 'academic', label: 'Métricas de Cátedra', icon: BarChart2 },
-          { id: 'evaluations', label: 'Log de Excelencia', icon: History }
+          { id: 'evaluations', label: 'Log de Excelencia', icon: History },
+          { id: 'analytics', label: 'Inteligencia Analítica', icon: TrendingUp }
         ].map(tab => (
           <button 
             key={tab.id}
@@ -547,6 +566,10 @@ export default function AdminDashboard() {
             </table>
           </div>
         </div>
+      )}
+
+      {activeTab === 'analytics' && (
+        <AnalyticsView submissions={submissions} evaluations={allEvaluations} />
       )}
 
       {/* Modal Detail */}

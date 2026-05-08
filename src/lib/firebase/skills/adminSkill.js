@@ -6,7 +6,8 @@ import {
   onSnapshot, 
   deleteDoc, 
   doc, 
-  updateDoc 
+  updateDoc,
+  serverTimestamp 
 } from "firebase/firestore";
 
 const SUBMISSIONS_COLLECTION = "submissions";
@@ -31,7 +32,11 @@ export const adminSkill = {
    */
   async updateStatus(id, status) {
     try {
-      await updateDoc(doc(db, SUBMISSIONS_COLLECTION, id), { status });
+      const updateData = { status };
+      if (status === 'completed') {
+        updateData.completedAt = serverTimestamp();
+      }
+      await updateDoc(doc(db, SUBMISSIONS_COLLECTION, id), updateData);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
