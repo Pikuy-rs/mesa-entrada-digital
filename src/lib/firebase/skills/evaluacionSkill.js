@@ -132,23 +132,41 @@ export const evaluacionSkill = {
         return acc;
       }, {});
 
+      // Crear un set de IDs de cátedras conocidas
+      const knownIds = new Set(catedras.map(c => c.id));
+
+      // Agregar cátedras "virtuales" detectadas en evaluaciones que no están en la lista principal
+      evaluations.forEach(e => {
+        const id = e.catedraId || e.teacherId;
+        if (id && !knownIds.has(id)) {
+          catedras.push({
+            id: id,
+            catedra: e.catedra || 'Cátedra Desconocida',
+            carrera: e.carrera || 'N/A',
+            nombre: 'Cátedra Detectada'
+          });
+          knownIds.add(id);
+        }
+      });
+
       return catedras.map(cat => {
         const evals = grouped[cat.id] || [];
         const count = evals.length;
 
-        const stats = count > 0 ? {
-          ict: evals.reduce((a, c) => a + (c.ict || 0), 0) / count,
-          ndc: evals.reduce((a, c) => a + (c.ndc || 0), 0) / count,
-          cat: evals.reduce((a, c) => a + (c.cat || 0), 0) / count,
-          tce: evals.reduce((a, c) => a + (c.tce || 0), 0) / count,
-          promedioGeneral: evals.reduce((a, c) => a + (c.ict || 0) + (c.ndc || 0) + (c.cat || 0) + (c.tce || 0), 0) / (count * 4),
+        const stats = {
+          ict: count > 0 ? evals.reduce((a, c) => a + (c.ict || 0), 0) / count : 0,
+          ndc: count > 0 ? evals.reduce((a, c) => a + (c.ndc || 0), 0) / count : 0,
+          cat: count > 0 ? evals.reduce((a, c) => a + (c.cat || 0), 0) / count : 0,
+          tce: count > 0 ? evals.reduce((a, c) => a + (c.tce || 0), 0) / count : 0,
+          promedioGeneral: count > 0 ? evals.reduce((a, c) => a + (c.ict || 0) + (c.ndc || 0) + (c.cat || 0) + (c.tce || 0), 0) / (count * 4) : 0,
           count,
           feedback: evals.map(e => e.accionExcelencia).filter(Boolean)
-        } : { ict: 0, ndc: 0, cat: 0, tce: 0, promedioGeneral: 0, count: 0, feedback: [] };
+        };
 
         return { ...cat, stats };
       });
     } catch (error) {
+      console.error("Error en getCatedrasWithStats:", error);
       return [];
     }
   }

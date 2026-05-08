@@ -232,6 +232,38 @@ export default function AdminDashboard() {
     XLSX.writeFile(workbook, `GALA_Excelencia_${format(new Date(), 'yyyyMMdd')}.xlsx`);
   };
 
+  const MetricGlossary = () => (
+    <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e2e8f0', marginBottom: '32px' }}>
+      <h4 style={{ margin: '0 0 16px 0', color: '#3f75ab', fontWeight: '900', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <MessageSquare size={20} /> Referencia de Evaluación
+      </h4>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+        {[
+          { s: 'ICT', t: 'Claridad Conceptual', d: 'Evalúa la capacidad de la cátedra para transmitir conocimientos de forma clara y aplicada.' },
+          { s: 'NDC', t: 'Disponibilidad de Material', d: 'Mide la integración tecnológica y organización del material digital.' },
+          { s: 'CAT', t: 'Criterio de Evaluación', d: 'Evalúa la coherencia entre lo enseñado y lo evaluado en los exámenes.' },
+          { s: 'TCE', t: 'Empatía y Sugerencias', d: 'Mide el trato humano, el compromiso y la predisposición para resolver dudas.' }
+        ].map(item => (
+          <div key={item.s}>
+            <div style={{ fontWeight: '900', color: '#000', fontSize: '0.9rem' }}>{item.s}: {item.t}</div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4' }}>{item.d}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: '16px', display: 'flex', gap: '24px', padding: '12px 0', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' }}></span> 3.8 - 5.0: Excelente
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' }}></span> 2.6 - 3.7: Aceptable
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }}></span> 1.0 - 2.5: Crítico
+        </div>
+      </div>
+    </div>
+  );
+
   if (authLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
@@ -367,18 +399,8 @@ export default function AdminDashboard() {
 
       {activeTab === 'academic' && (
         <div className="animate-fade-in">
-          {/* Legend */}
-          <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e2e8f0', marginBottom: '32px', display: 'flex', gap: '24px', justifyContent: 'center' }}>
-            {['Excelente', 'Aceptable', 'Crítico'].map(label => {
-              const info = getInstitutionalStatus(label === 'Excelente' ? 4 : label === 'Aceptable' ? 3 : 1);
-              return (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: '800', color: info.text }}>
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: info.color }}></span> {label}
-                </div>
-              );
-            })}
-          </div>
-
+          <MetricGlossary />
+          
           <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
             <div style={{ flex: '1 1 300px', position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
@@ -446,6 +468,7 @@ export default function AdminDashboard() {
 
       {activeTab === 'evaluations' && (
         <div className="animate-fade-in">
+          <MetricGlossary />
           <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
             <div style={{ flex: '1 1 300px', position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
