@@ -26,7 +26,9 @@ import {
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
-export default function AdminDashboard({ user }) {
+import AuthGuard from './AuthGuard';
+
+function AdminDashboardContent({ user }) {
   const [activeTab, setActiveTab] = useState('submissions'); 
   const [submissions, setSubmissions] = useState([]);
   const [academicStats, setAcademicStats] = useState([]);
@@ -621,5 +623,13 @@ export default function AdminDashboard({ user }) {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <AuthGuard>
+      <AdminDashboardContent />
+    </AuthGuard>
   );
 }
