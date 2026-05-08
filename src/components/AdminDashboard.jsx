@@ -91,17 +91,14 @@ export default function AdminDashboard() {
       fetchAcademic();
     } else if (activeTab === 'evaluations') {
       const fetchEvals = async () => {
-        const statsData = await evaluacionSkill.getCatedrasWithStats(); 
-        const snap = await evaluacionSkill.getCatedrasWithStats();
-        const evals = [];
-        snap.forEach(cat => {
-          if (cat.stats && cat.stats.feedback) {
-            // Logic if needed
-          }
-        });
-        const evaluationsData = await getAllEvaluations();
-        setAllEvaluations(evaluationsData);
-        setLoading(false);
+        try {
+          const evaluationsData = await getAllEvaluations();
+          setAllEvaluations(evaluationsData);
+        } catch (error) {
+          console.error("Error al cargar evaluaciones:", error);
+        } finally {
+          setLoading(false);
+        }
       };
       fetchEvals();
     }
@@ -301,9 +298,17 @@ export default function AdminDashboard() {
           <h1 style={{ fontSize: '3rem', fontWeight: '950', color: '#3f75ab', letterSpacing: '-0.04em', margin: 0 }}>GALA Dashboard</h1>
           <p style={{ fontSize: '1.2rem', color: '#4b5563', fontWeight: '700', margin: 0 }}>Gestión Institucional de Alternativa Tecnológica</p>
         </div>
-        <button className="glass-button" style={{ background: '#000', color: '#fff', borderRadius: '1rem', padding: '12px 24px' }} onClick={handleLogout}>
-          <LogOut size={18} /> Cerrar Sesión
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          {loading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3f75ab', fontWeight: '700' }}>
+              <Loader2 className="animate-spin" size={20} />
+              <span>Cargando métricas institucionales...</span>
+            </div>
+          )}
+          <button className="glass-button" style={{ background: '#000', color: '#fff', borderRadius: '1rem', padding: '12px 24px' }} onClick={handleLogout}>
+            <LogOut size={18} /> Cerrar Sesión
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
