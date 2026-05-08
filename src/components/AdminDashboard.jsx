@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { adminSkill } from '@/lib/firebase/skills/adminSkill';
 import { evaluacionSkill } from '@/lib/firebase/skills/evaluacionSkill';
 import { logoutAdmin, subscribeToAuthChanges } from '@/services/auth';
+import { getAllEvaluations } from '@/services/academicService';
 import { getInstitutionalStatus, formatMetric } from '@/lib/utils';
 import AdminLogin from './AdminLogin';
 import { 
@@ -90,20 +91,16 @@ export default function AdminDashboard() {
       fetchAcademic();
     } else if (activeTab === 'evaluations') {
       const fetchEvals = async () => {
-        const data = await evaluacionSkill.getCatedrasWithStats(); // Reuse or fetch all evals
-        // For simple evaluation log, we might need a dedicated skill method or use the grouped one
+        const statsData = await evaluacionSkill.getCatedrasWithStats(); 
         const snap = await evaluacionSkill.getCatedrasWithStats();
-        // Flatten evaluations for the log
         const evals = [];
         snap.forEach(cat => {
           if (cat.stats && cat.stats.feedback) {
-            // This is a bit simplified, ideally we fetch raw evaluations
+            // Logic if needed
           }
         });
-        // Let's use the old service for now or add a method to evaluacionSkill
-        const { getAllEvaluations } = require('@/services/academicService');
-        const data = await getAllEvaluations();
-        setAllEvaluations(data);
+        const evaluationsData = await getAllEvaluations();
+        setAllEvaluations(evaluationsData);
         setLoading(false);
       };
       fetchEvals();
