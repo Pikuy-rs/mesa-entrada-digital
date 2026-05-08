@@ -17,10 +17,48 @@ const EVALUATIONS_COLLECTION = "evaluaciones_excelencia";
  */
 export const evaluacionSkill = {
   /**
+   * Seeding automático de cátedras para inicializar el sistema.
+   */
+  async autoSeed() {
+    const sistemas = [
+      "Análisis Matemático I", "Álgebra y Geometría Analítica", "Física I", "Inglés I", 
+      "Lógica y Estructuras Discretas", "Algoritmos y Estructuras de Datos", 
+      "Arquitectura de Computadoras", "Sistemas y Procesos de Negocio",
+      "Análisis Matemático II", "Física II", "Ingeniería y Sociedad", "Inglés II", 
+      "Sintaxis y Semántica de los Lenguajes", "Paradigmas de Programación", 
+      "Sistemas Operativos", "Análisis de Sistemas de Información",
+      "Probabilidad y Estadística", "Economía", "Bases de Datos", "Desarrollo de Software", 
+      "Comunicación de Datos", "Análisis Numérico", "Diseño de Sistemas de Información",
+      "Legislación", "Ingeniería y Calidad de Software", "Redes de Datos", 
+      "Investigación Operativa", "Simulación", "Tecnologías para la automatización", 
+      "Administración de Sistemas de Información",
+      "Inteligencia Artificial", "Ciencia de Datos", "Sistemas de Gestión", 
+      "Gestión Gerencial", "Seguridad en los Sistemas de Información", "Proyecto Final"
+    ];
+
+    try {
+      const q = query(collection(db, CATEDRAS_COLLECTION));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        for (const s of sistemas) {
+          await addDoc(collection(db, CATEDRAS_COLLECTION), {
+            nombre: "Cátedra General",
+            catedra: s,
+            carrera: "Ingeniería en Sistemas de Información"
+          });
+        }
+      }
+    } catch (error) {
+      // Error silencioso en seeding
+    }
+  },
+
+  /**
    * Obtiene todas las cátedras registradas.
    */
   async getCatedras() {
     try {
+      await this.autoSeed();
       const q = query(collection(db, CATEDRAS_COLLECTION), orderBy("catedra"));
       const snap = await getDocs(q);
       return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -78,6 +116,7 @@ export const evaluacionSkill = {
    */
   async getCatedrasWithStats() {
     try {
+      await this.autoSeed();
       const [catSnap, evalSnap] = await Promise.all([
         getDocs(collection(db, CATEDRAS_COLLECTION)),
         getDocs(collection(db, EVALUATIONS_COLLECTION))
