@@ -303,12 +303,12 @@ function AdminDashboardContent({ user }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px' }}>
         <div>
-          <h1 style={{ fontSize: '3rem', fontWeight: '950', color: '#3f75ab', letterSpacing: '-0.04em', margin: 0 }}>GALA Dashboard</h1>
-          <p style={{ fontSize: '1.2rem', color: '#4b5563', fontWeight: '700', margin: 0 }}>Gestión Institucional de Alternativa Tecnológica</p>
+          <h1 style={{ fontSize: '3.5rem', fontWeight: '950', color: 'var(--color-primary)', letterSpacing: '-0.04em', margin: 0, fontFamily: 'var(--font-display)' }}>GALA Dashboard</h1>
+          <p style={{ fontSize: '1.2rem', color: 'var(--color-text)', fontWeight: '700', margin: 0 }}>Gestión Institucional de Alternativa Tecnológica</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3f75ab', fontWeight: '700' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: '700' }}>
               <Loader2 className="animate-spin" size={20} />
               <span>Cargando métricas institucionales...</span>
             </div>
@@ -340,9 +340,10 @@ function AdminDashboardContent({ user }) {
               alignItems: 'center', 
               justifyContent: 'center', 
               gap: '12px',
-              background: activeTab === tab.id ? '#3f75ab' : '#ffffff',
-              color: activeTab === tab.id ? '#fff' : '#4b5563',
-              border: '3px solid #3f75ab',
+              background: activeTab === tab.id ? 'var(--color-primary)' : '#ffffff',
+              color: activeTab === tab.id ? '#fff' : 'var(--color-text)',
+              border: '4px solid var(--color-primary)',
+              boxShadow: activeTab === tab.id ? '6px 6px 0px 0px rgba(0,51,102,1)' : 'none',
               transition: 'all 0.3s'
             }}
           >
@@ -355,67 +356,67 @@ function AdminDashboardContent({ user }) {
       {activeTab === 'submissions' && (
         <div className="animate-fade-in">
           {/* KPI Cards Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px', marginBottom: '40px' }}>
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px var(--color-primary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ background: '#3f75ab15', padding: '10px', borderRadius: '1rem', color: '#3f75ab' }}>
+                <div style={{ background: 'var(--color-primary)15', padding: '10px', borderRadius: '4px', color: 'var(--color-primary)' }}>
                   <Inbox size={24} />
                 </div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Histórico</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Histórico</span>
               </div>
-              <div style={{ fontSize: '2rem', fontWeight: '950', color: '#1f2937' }}>{kpisSubmissions.total}</div>
-              <div style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '700' }}>Trámites Recibidos</div>
+              <div style={{ fontSize: '3rem', fontWeight: '950', color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}>{kpisSubmissions.total}</div>
+              <div style={{ fontSize: '1rem', color: 'var(--color-text)', fontWeight: '700' }}>Trámites Recibidos</div>
             </div>
 
-            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px var(--color-accent)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ background: '#10b98115', padding: '10px', borderRadius: '1rem', color: '#10b981' }}>
+                <div style={{ background: 'var(--color-accent)15', padding: '10px', borderRadius: '4px', color: 'var(--color-accent)' }}>
                   <CheckCircle2 size={24} />
                 </div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Eficiencia</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--color-accent)', textTransform: 'uppercase' }}>Eficiencia</span>
               </div>
-              <div style={{ fontSize: '2rem', fontWeight: '950', color: '#1f2937' }}>{kpisSubmissions.tasa}%</div>
-              <div style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '700' }}>Tasa de Resolución</div>
+              <div style={{ fontSize: '3rem', fontWeight: '950', color: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}>{kpisSubmissions.tasa}%</div>
+              <div style={{ fontSize: '1rem', color: 'var(--color-text)', fontWeight: '700' }}>Tasa de Resolución</div>
             </div>
 
-            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px var(--color-primary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ background: '#3f75ab15', padding: '10px', borderRadius: '1rem', color: '#3f75ab' }}>
+                <div style={{ background: 'var(--color-primary)15', padding: '10px', borderRadius: '4px', color: 'var(--color-primary)' }}>
                   <Clock size={24} />
                 </div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>SLA Gestión</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>SLA Gestión</span>
               </div>
-              <div style={{ fontSize: '2rem', fontWeight: '950', color: '#3f75ab' }}>{kpisSubmissions.sla}</div>
-              <div style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '700' }}>Tiempo de Respuesta</div>
+              <div style={{ fontSize: '3rem', fontWeight: '950', color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}>{kpisSubmissions.sla}</div>
+              <div style={{ fontSize: '1rem', color: 'var(--color-text)', fontWeight: '700' }}>Tiempo de Respuesta</div>
             </div>
           </div>
 
-          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
             <div style={{ flex: '1 1 300px', position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
-              <input type="text" placeholder="Buscar por DNI o Nombre..." className="glass-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '1rem' }} />
+              <input type="text" placeholder="Buscar por DNI o Nombre..." className="glass-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '4px', border: '2px solid var(--color-primary)' }} />
             </div>
             
-            <select className="glass-input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', borderRadius: '1rem' }}>
+            <select className="glass-input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', borderRadius: '4px', border: '2px solid var(--color-primary)' }}>
               <option value="pending">Solo Pendientes</option>
               <option value="completed">Solo Completados</option>
               <option value="">Todos los estados</option>
             </select>
 
-            <button className="glass-button" style={{ background: '#ef5f27', color: '#fff', borderRadius: '1rem', border: 'none' }} onClick={handleExportExcel}>
+            <button className="glass-button" style={{ background: 'var(--color-accent)', color: '#fff', borderRadius: '4px', border: 'none' }} onClick={handleExportExcel}>
               <Download size={18} /> Exportar Pendientes (.xlsx)
             </button>
           </div>
 
-          <div style={{ background: '#ffffff', borderRadius: '2rem', overflow: 'hidden', border: '2px solid #e5e7eb', boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}>
+          <div style={{ background: '#ffffff', borderRadius: '4px', overflow: 'hidden', border: '4px solid var(--color-primary)', boxShadow: '12px 12px 0px 0px var(--color-primary)33' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '2px solid #3f75ab' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Fecha</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Estudiante</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Trámite</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab' }}>Estado</th>
-                  <th style={{ padding: '24px', textAlign: 'right', fontWeight: '900', color: '#3f75ab' }}>Acciones</th>
+                <tr style={{ background: 'var(--color-bg)', borderBottom: '4px solid var(--color-primary)' }}>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Fecha</th>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Estudiante</th>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Trámite</th>
+                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Estado</th>
+                  <th style={{ padding: '24px', textAlign: 'right', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -468,27 +469,27 @@ function AdminDashboardContent({ user }) {
         <div className="animate-fade-in">
           <MetricGlossary />
           
-          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
             <div style={{ flex: '1 1 300px', position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
-              <input type="text" placeholder="Buscar Cátedra..." className="glass-input" value={academicSearch} onChange={(e) => setAcademicSearch(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '1rem' }} />
+              <input type="text" placeholder="Buscar Cátedra..." className="glass-input" value={academicSearch} onChange={(e) => setAcademicSearch(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '4px', border: '2px solid var(--color-primary)' }} />
             </div>
-            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '1rem' }}>
+            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '4px', border: '2px solid var(--color-primary)' }}>
               <option value="">Todas las Carreras</option>
               <option value="Ingeniería en Sistemas de Información">Sistemas</option>
               <option value="Ingeniería Electrónica">Electrónica</option>
             </select>
-            <button className="glass-button" style={{ background: '#3f75ab', color: '#fff' }} onClick={handleExportAcademicSummary}><Download size={18} /> Exportar Resumen</button>
+            <button className="glass-button" style={{ background: 'var(--color-primary)', color: '#fff' }} onClick={handleExportAcademicSummary}><Download size={18} /> Exportar Resumen</button>
           </div>
 
-          <div style={{ background: '#ffffff', borderRadius: '2rem', overflow: 'hidden', border: '2px solid #e5e7eb' }}>
+          <div style={{ background: '#ffffff', borderRadius: '4px', overflow: 'hidden', border: '4px solid var(--color-primary)', boxShadow: '12px 12px 0px 0px var(--color-primary)33' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '2px solid #3f75ab' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Cátedra / Materia</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab' }}>Evaluaciones</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab' }}>Promedio</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Desglose de Calidad</th>
+                <tr style={{ background: 'var(--color-bg)', borderBottom: '4px solid var(--color-primary)' }}>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Cátedra / Materia</th>
+                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Evaluaciones</th>
+                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Promedio</th>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Desglose de Calidad</th>
                 </tr>
               </thead>
               <tbody>
@@ -536,26 +537,26 @@ function AdminDashboardContent({ user }) {
       {activeTab === 'evaluations' && (
         <div className="animate-fade-in">
           <MetricGlossary />
-          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
             <div style={{ flex: '1 1 300px', position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
-              <input type="text" placeholder="Buscar por Cátedra..." className="glass-input" value={evalSearch} onChange={(e) => setEvalSearch(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '1rem' }} />
+              <input type="text" placeholder="Buscar por Cátedra..." className="glass-input" value={evalSearch} onChange={(e) => setEvalSearch(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '4px', border: '2px solid var(--color-primary)' }} />
             </div>
-            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '1rem' }}>
+            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '4px', border: '2px solid var(--color-primary)' }}>
               <option value="">Todas las Carreras</option>
               <option value="Ingeniería en Sistemas de Información">Sistemas</option>
               <option value="Ingeniería Electrónica">Electrónica</option>
             </select>
           </div>
 
-          <div style={{ background: '#ffffff', borderRadius: '2rem', overflow: 'hidden', border: '2px solid #e5e7eb' }}>
+          <div style={{ background: '#ffffff', borderRadius: '4px', overflow: 'hidden', border: '4px solid var(--color-primary)', boxShadow: '12px 12px 0px 0px var(--color-primary)33' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '2px solid #3f75ab' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Fecha</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Cátedra / Carrera</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: '#3f75ab' }}>Puntajes</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: '#3f75ab' }}>Acción para la Excelencia</th>
+                <tr style={{ background: 'var(--color-bg)', borderBottom: '4px solid var(--color-primary)' }}>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Fecha</th>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Cátedra / Carrera</th>
+                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Puntajes</th>
+                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Acción para la Excelencia</th>
                 </tr>
               </thead>
               <tbody>

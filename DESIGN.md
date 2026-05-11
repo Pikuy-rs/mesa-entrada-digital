@@ -1,37 +1,37 @@
-# Documento de Diseño: Mesa de Entrada Digital & Dashboard GALA
+# Manifiesto de Diseño: Identidad Muralista GALA
 
-Este documento describe la arquitectura, decisiones de diseño y modelos de datos del ecosistema GALA, siguiendo los estándares de Google Labs.
+Este documento establece las reglas de oro estéticas para el ecosistema GALA, integrando la mística del muralismo urbano y universitario en una interfaz de gestión institucional de alto rendimiento.
 
-## 1. Introducción
-La Mesa de Entrada Digital es una plataforma institucional diseñada para la gestión de trámites estudiantiles y el monitoreo estratégico de la calidad educativa mediante el sistema de Excelencia Académica.
+## 1. Paleta de Colores: Alto Contraste Institucional
 
-## 2. Arquitectura del Sistema
-El sistema utiliza una arquitectura **Serverless** basada en:
-- **Frontend**: Next.js (App Router) para una experiencia de usuario rápida y reactiva.
-- **Backend-as-a-Service**: Firebase (Firestore, Auth) para la gestión de datos en tiempo real y seguridad.
-- **Arquitectura de Skills**: Lógica de negocio encapsulada en módulos independientes para facilitar la escalabilidad y mantenimiento.
+La paleta se aleja de los tonos genéricos para adoptar una identidad vibrante y autoritaria.
 
-### 2.1. Separación de Portales
-- **Portal Público**: Acceso abierto para estudiantes. Permite el envío de trámites y evaluaciones de cátedras. No requiere autenticación para maximizar la participación, pero utiliza validaciones de seguridad para prevenir abusos.
-- **Dashboard GALA (/admin)**: Portal restringido para la gestión institucional. Requiere autenticación mediante Firebase Auth para acceder a datos sensibles y métricas consolidadas.
-
-## 3. Modelo de Datos de Excelencia Académica
-El núcleo del sistema de monitoreo se basa en cuatro ejes estratégicos (Índices):
-
-| Índice | Definición | Aplicación |
+| Color | Hex | Uso |
 | :--- | :--- | :--- |
-| **ICT** | Índice de Claridad Transmisiva | Capacidad de la cátedra para transmitir conocimientos de forma clara. |
-| **NDC** | Nivel de Digitalización | Integración del campus virtual y organización de materiales. |
-| **CAT** | Apoyo a la Trayectoria | Compromiso humano, empatía y seguimiento del estudiante. |
-| **TCE** | Coherencia Evaluativa | Justicia y alineación entre lo enseñado y lo evaluado. |
+| **Azul Profundo** | `#003366` | Fondos principales, tipografía de autoridad y headers. |
+| **Naranja Vibrante** | `#FF6600` | Acciones principales (CTAs), alertas y acentos de energía. |
+| **Blanco Tiza** | `#F5F5F5` | Fondos de tarjetas, contraste de lectura y texturas de pared. |
+| **Gris Concreto** | `#333333` | Bordes, sombras de profundidad y elementos de estructura. |
 
-### 3.1. Semáforo de Gestión
-Se utiliza un sistema de visualización de "semáforo" para facilitar la detección de áreas críticas:
-- 🟢 **Excelente (3.8 - 5.0)**: Desempeño destacado.
-- 🟡 **Aceptable (2.6 - 3.7)**: Áreas con oportunidad de mejora.
-- 🔴 **Crítico (1.0 - 2.5)**: Intervención institucional recomendada.
+## 2. Componentes: La Estética de la Capa
 
-## 4. Decisiones de Diseño (ADRs)
-- **Uso de Firebase Auth**: Reemplazo del sistema de PIN por autenticación robusta para cumplir con estándares de seguridad modernos.
-- **Inmutabilidad de Evaluaciones**: Las evaluaciones enviadas por estudiantes son inmutables para garantizar la integridad de las métricas.
-- **Exportación a Excel**: Herramienta estratégica para el análisis offline y archivo histórico institucional.
+Inspirado en la superposición de pintura en un mural:
+
+- **Cards (Tarjetas)**:
+  - **Bordes**: No deben ser perfectamente rectos. Se prefieren bordes ligeramente irregulares o con radios de curvatura variados.
+  - **Sombras**: Utilizar sombras "Drop Shadow" que simulen capas de pintura superpuestas (`shadow-[8px_8px_0px_0px_rgba(0,51,102,1)]`).
+  - **Textura**: Los fondos de las tarjetas pueden tener un grano sutil que simule la porosidad del concreto.
+
+## 3. Tipografía: Gestión con Impacto
+
+- **KPIs y Números**: Uso obligatorio de fuentes tipo **"Stencil"** o **"Sans-Serif Audaz"** (ej. *Inter Black* o *Archivo Black*) para transmitir una sensación de "obra en construcción" y robustez.
+- **Cuerpo de Texto**: Sans-serif limpia para máxima legibilidad sobre fondos de alto contraste.
+
+## 4. Fondo del Sistema: El Mural Inmersivo
+
+El fondo del Dashboard no es un color plano. Debe evocar una **Pared de Concreto/Mural**:
+- Uso de patrones CSS de ruido o texturas de piedra.
+- Preparado para la integración de fotos y videos de murales reales como capas de fondo con baja opacidad.
+
+## 5. Regla de Oro
+> "Si el diseño se ve demasiado limpio o corporativo, ha fallado. Debe sentirse humano, artesanal y con la fuerza de un mural universitario."

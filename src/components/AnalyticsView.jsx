@@ -90,22 +90,22 @@ export default function AnalyticsView({ submissions = [], evaluations = [] }) {
   const Card = ({ title, value, icon: Icon, color, suffix = "" }) => (
     <div style={{ 
       background: '#ffffff', 
-      padding: '24px', 
-      borderRadius: '1.5rem', 
-      border: '2px solid #e5e7eb',
-      boxShadow: '0 10px 20px rgba(0,0,0,0.02)',
+      padding: '32px', 
+      borderRadius: '4px', 
+      border: '3px solid var(--color-primary)',
+      boxShadow: `8px 8px 0px 0px ${color || 'var(--color-primary)'}`,
       flex: '1 1 200px'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ background: `${color}15`, padding: '10px', borderRadius: '1rem', color }}>
+        <div style={{ background: `${color}15`, padding: '10px', borderRadius: '4px', color }}>
           <Icon size={24} />
         </div>
-        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase' }}>Histórico</span>
+        <span style={{ fontSize: '0.85rem', fontWeight: '900', color: color || 'var(--color-primary)', textTransform: 'uppercase' }}>Histórico</span>
       </div>
-      <h3 style={{ fontSize: '2rem', fontWeight: '950', color: '#1f2937', margin: '0 0 4px 0' }}>
+      <h3 style={{ fontSize: '2.5rem', fontWeight: '950', color: 'var(--color-primary)', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>
         {typeof value === 'number' && !Number.isInteger(value) ? value.toFixed(1) : value}{suffix}
       </h3>
-      <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem', fontWeight: '700' }}>{title}</p>
+      <p style={{ margin: 0, color: 'var(--color-text)', fontSize: '1rem', fontWeight: '700' }}>{title}</p>
     </div>
   );
 
@@ -123,39 +123,39 @@ export default function AnalyticsView({ submissions = [], evaluations = [] }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '32px' }}>
         
         {/* Demand Chart */}
-        <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb' }}>
+        <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
           <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <BarChart2 style={{ color: '#3f75ab' }} />
-            <h3 style={{ margin: 0, fontWeight: '900', fontSize: '1.4rem' }}>Demanda Administrativa</h3>
+            <BarChart2 style={{ color: 'var(--color-primary)' }} />
+            <h3 style={{ margin: 0, fontWeight: '900', fontSize: '1.6rem', fontFamily: 'var(--font-display)', color: 'var(--color-primary)' }}>Demanda Administrativa</h3>
           </div>
           <div style={{ height: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={demandData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontWeight: '700', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontWeight: '700', fontSize: 12 }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontWeight: '900', fontSize: 12, fill: 'var(--color-primary)' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontWeight: '900', fontSize: 12, fill: 'var(--color-primary)' }} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
-                  itemStyle={{ fontWeight: '800' }}
+                  contentStyle={{ borderRadius: '4px', border: '2px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}
+                  itemStyle={{ fontWeight: '900' }}
                 />
-                <Bar dataKey="total" fill="#3f75ab" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total" fill="var(--color-primary)" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Academic Evolution Chart */}
-        <div style={{ background: '#ffffff', padding: '32px', borderRadius: '2rem', border: '2px solid #e5e7eb' }}>
+        <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
           <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <TrendingUp style={{ color: '#ef5f27' }} />
-              <h3 style={{ margin: 0, fontWeight: '900', fontSize: '1.4rem' }}>Evolución de Cátedra</h3>
+              <TrendingUp style={{ color: 'var(--color-accent)' }} />
+              <h3 style={{ margin: 0, fontWeight: '900', fontSize: '1.6rem', fontFamily: 'var(--font-display)', color: 'var(--color-primary)' }}>Evolución de Cátedra</h3>
             </div>
             <select 
               className="glass-input" 
               value={selectedCatedra} 
               onChange={(e) => setSelectedCatedra(e.target.value)}
-              style={{ padding: '8px 16px', borderRadius: '0.75rem', fontWeight: '700', border: '2px solid #ef5f27', background: '#fff' }}
+              style={{ padding: '8px 16px', borderRadius: '4px', fontWeight: '900', border: '2px solid var(--color-primary)', background: '#fff', width: 'auto' }}
             >
               <option value="">Seleccionar Cátedra...</option>
               {uniqueCatedras.map(c => <option key={c} value={c}>{c}</option>)}
@@ -164,23 +164,23 @@ export default function AnalyticsView({ submissions = [], evaluations = [] }) {
           
           <div style={{ height: '300px', width: '100%' }}>
             {!selectedCatedra ? (
-              <div style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#9ca3af', fontWeight: '700', border: '2px dashed #f3f4f6', borderRadius: '1rem' }}>
+              <div style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--color-primary)', fontWeight: '900', border: '3px dashed var(--color-primary)33', borderRadius: '4px' }}>
                 Seleccione una cátedra para visualizar la tendencia
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={academicTrendData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontWeight: '700', fontSize: 12 }} />
-                  <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{ fontWeight: '700', fontSize: 12 }} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontWeight: '900', fontSize: 12, fill: 'var(--color-primary)' }} />
+                  <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{ fontWeight: '900', fontSize: 12, fill: 'var(--color-primary)' }} />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
+                    contentStyle={{ borderRadius: '4px', border: '2px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontWeight: '800', paddingTop: '20px' }} />
-                  <Line type="monotone" dataKey="ICT" stroke="#3f75ab" strokeWidth={4} dot={{ r: 6 }} activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="NDC" stroke="#10b981" strokeWidth={4} dot={{ r: 6 }} activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="CAT" stroke="#f59e0b" strokeWidth={4} dot={{ r: 6 }} activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="TCE" stroke="#ef5f27" strokeWidth={4} dot={{ r: 6 }} activeDot={{ r: 8 }} />
+                  <Legend iconType="square" wrapperStyle={{ fontWeight: '900', paddingTop: '20px', color: 'var(--color-primary)' }} />
+                  <Line type="monotone" dataKey="ICT" stroke="var(--color-primary)" strokeWidth={5} dot={{ r: 6, fill: 'var(--color-primary)' }} activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="NDC" stroke="#10b981" strokeWidth={5} dot={{ r: 6, fill: '#10b981' }} activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="CAT" stroke="#f59e0b" strokeWidth={5} dot={{ r: 6, fill: '#f59e0b' }} activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="TCE" stroke="var(--color-accent)" strokeWidth={5} dot={{ r: 6, fill: 'var(--color-accent)' }} activeDot={{ r: 8 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
