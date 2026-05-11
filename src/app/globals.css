@@ -1,6 +1,7 @@
 :root {
   --color-primary: #003366; /* Azul Profundo */
   --color-accent: #FF6600;  /* Naranja Vibrante */
+  --color-alert: var(--color-accent);
   --color-bg: #F5F5F5;      /* Blanco Tiza */
   --color-text: #333333;    /* Gris Concreto */
   

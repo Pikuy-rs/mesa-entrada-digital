@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { FormInput, Settings, MapPin } from 'lucide-react';
+import { FormInput, Settings, MapPin, Users } from 'lucide-react';
 
 export default function ProcessInfographic() {
   return (
@@ -70,7 +70,7 @@ export default function ProcessInfographic() {
           }}>
             <FormInput size={36} color="var(--color-primary)" />
           </div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--color-text)' }}>1. Solicitud Digital</h3>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}>1. Solicitud Digital</h3>
           <p style={{ fontSize: '0.95rem', lineHeight: 1.5, color: '#6b7280' }}>
             Completás tus datos en 1 minuto.
           </p>
@@ -80,11 +80,11 @@ export default function ProcessInfographic() {
             position: 'absolute',
             top: '40px',
             left: 'calc(50% + 40px)',
-            width: 'calc(100% - 80px)',
-            height: '4px',
-            borderBottom: '4px dotted var(--color-primary)',
+            width: 'calc(100% - 40px)',
+            height: '2px',
+            borderBottom: '4px dashed var(--color-primary)',
             zIndex: -1,
-            opacity: 0.6
+            opacity: 0.4
           }}></div>
         </div>
 
@@ -94,15 +94,15 @@ export default function ProcessInfographic() {
             width: '80px', height: '80px', 
             borderRadius: '50%', 
             background: '#ffffff', 
-            border: '2px solid var(--color-alert)',
+            border: '3px solid var(--color-accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 24px',
-            boxShadow: '0 10px 20px rgba(172, 85, 164, 0.15)',
+            boxShadow: '8px 8px 0px 0px rgba(255, 102, 0, 0.2)',
             transition: 'all 0.3s'
           }}>
-            <Settings size={36} color="var(--color-alert)" />
+            <Users size={36} color="var(--color-accent)" />
           </div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--color-text)' }}>2. Gestión Directa</h3>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}>2. Gestión Directa</h3>
           <p style={{ fontSize: '0.95rem', lineHeight: 1.5, color: '#6b7280' }}>
             El Centro de Estudiantes procesa tu pedido sin intermediarios.
           </p>
@@ -112,11 +112,11 @@ export default function ProcessInfographic() {
             position: 'absolute',
             top: '40px',
             left: 'calc(50% + 40px)',
-            width: 'calc(100% - 80px)',
-            height: '4px',
-            borderBottom: '4px dotted var(--color-alert)',
+            width: 'calc(100% - 40px)',
+            height: '2px',
+            borderBottom: '4px dashed var(--color-accent)',
             zIndex: -1,
-            opacity: 0.6
+            opacity: 0.4
           }}></div>
         </div>
 
@@ -134,7 +134,7 @@ export default function ProcessInfographic() {
           }}>
             <MapPin size={36} color="#10b981" />
           </div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--color-text)' }}>3. Retiro Seguro</h3>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}>3. Retiro Seguro</h3>
           <p style={{ fontSize: '0.95rem', lineHeight: 1.5, color: '#6b7280' }}>
             En <strong>24/48hs</strong> buscás tu trámite por Casa Central (Centro de Estudiantes) o Anexo Concepción (SAE).
           </p>
