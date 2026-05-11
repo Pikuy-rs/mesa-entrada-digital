@@ -112,7 +112,7 @@ export default function GalaQuote() {
           
           <blockquote style={{ margin: 0 }}>
             <p className="quote-text">
-              "La gestión no es un favor, es un derecho. Entendemos la tecnología como la gran igualadora que nos permite acercar la facultad a cada estudiante, sin intermediarios ni punteros. Nuestra Mesa de Entrada Digital garantiza que tu esfuerzo académico sea lo único que importe. Estamos liderando el avance tecnológico para que tus derechos nunca más sean moneda de cambio."
+              "La gestión no es un favor, es un derecho. Entendemos la tecnología como la gran igualadora que nos permite acercar la facultad a cada estudiante, sin intermediarios ni punteros. Nuestra Mesa de Entrada Digital garantiza que tu esfuerzo académico sea lo único que importe."
             </p>
             <footer className="footer-flex" style={{ 
               display: 'flex', 
