@@ -77,11 +77,12 @@ export default function SubmissionForm() {
     return (
       <div style={{ textAlign: 'center', margin: '40px 0' }}>
         <h2 style={{ 
-          fontSize: '3rem', 
-          fontWeight: '800', 
+          fontSize: '3.5rem', 
+          fontWeight: '950', 
           color: 'var(--color-primary)', 
           marginBottom: '32px',
-          letterSpacing: '-0.02em'
+          letterSpacing: '-0.04em',
+          fontFamily: 'var(--font-display)'
         }} className="text-gradient-primary">
           Mesa de Entrada Digital
         </h2>
@@ -92,10 +93,10 @@ export default function SubmissionForm() {
           margin: '0 auto 60px auto', 
           padding: '60px', 
           background: '#ffffff', 
-          borderRadius: '2.5rem',
-          border: '3px solid #3f75ab',
+          borderRadius: '4px',
+          border: '4px solid var(--color-primary)',
           textAlign: 'left',
-          boxShadow: '0 30px 60px rgba(0,0,0,0.12)',
+          boxShadow: '12px 12px 0px 0px var(--color-primary)33',
           position: 'relative'
         }} className="animate-fade-in">
           <div style={{ display: 'flex', gap: '50px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -114,10 +115,10 @@ export default function SubmissionForm() {
                 margin: '0 0 32px 0',
                 letterSpacing: '-0.01em'
               }}>
-                "La gestión no es un favor, es un derecho. Entendemos la tecnología como la gran igualadora que nos permite acercar la facultad a cada estudiante, sin intermediarios ni punteros. Nuestra Mesa de Entrada Digital garantiza que tu esfuerzo académico sea lo único que importe. Estamos liderando el avance tecnológico para que tus derechos nunca más sean moneda de cambio."
+                "La gestión no es un favor, es un derecho. Entendemos la tecnología como la gran igualadora que nos permite acercar la facultad a cada estudiante, sin intermediarios ni punteros. Nuestra Mesa de Entrada Digital garantiza que tu esfuerzo académico sea lo único que importe."
               </p>
               <div>
-                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '1.5rem', fontWeight: '900' }}>Gala Bórquez</strong>
+                <strong style={{ display: 'block', color: 'var(--color-primary)', fontSize: '1.5rem', fontWeight: '950', fontFamily: 'var(--font-display)' }}>Gala Bórquez</strong>
                 <span style={{ fontSize: '1.1rem', color: '#4b5563', fontWeight: '700' }}>Presidenta del Centro de Estudiantes</span>
               </div>
             </div>
