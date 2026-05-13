@@ -82,6 +82,18 @@ export const adminSkill = {
   },
 
   /**
+   * Actualiza el responsable asignado a un trámite.
+   */
+  async updateAssignment(id, responsable) {
+    try {
+      await updateDoc(doc(db, SUBMISSIONS_COLLECTION, id), { responsable });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Calcula el SLA (Tiempo Promedio de Resolución) de los trámites.
    */
   calculateSLA(records) {

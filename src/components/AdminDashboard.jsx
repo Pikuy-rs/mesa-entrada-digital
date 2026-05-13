@@ -2,11 +2,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminSkill } from '@/lib/firebase/skills/adminSkill';
 import { evaluacionSkill } from '@/lib/firebase/skills/evaluacionSkill';
-import { logoutAdmin, subscribeToAuthChanges } from '@/services/auth';
+import { logoutAdmin } from '@/services/auth';
 import { getAllEvaluations } from '@/services/academicService';
-import { getInstitutionalStatus, formatMetric } from '@/lib/utils';
-import AdminLogin from './AdminLogin';
-import AnalyticsView from './AnalyticsView';
+import AuthGuard from './AuthGuard';
+import styles from './AdminDashboard.module.css';
 import { 
   Download, 
   Search, 
@@ -15,611 +14,782 @@ import {
   X, 
   Trash2, 
   Inbox,
-  BarChart2,
-  History,
   CheckCircle2,
   Clock,
-  MessageSquare,
   Loader2,
-  TrendingUp
+  AlertCircle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar,
+  LayoutDashboard,
+  BarChart3,
+  GraduationCap,
+  ClipboardList,
+  ChevronRight,
+  FileText,
+  Activity,
+  User,
+  ShieldCheck,
+  Info,
+  BookOpen
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { format } from 'date-fns';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell,
+  LineChart, Line,
+  PieChart, Pie,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend
+} from 'recharts';
+import { format, subDays, isAfter, differenceInHours, eachDayOfInterval, startOfDay } from 'date-fns';
 
-import AuthGuard from './AuthGuard';
+const formatMetric = (value) => {
+  if (value === null || value === undefined) return 'N/A';
+  const num = Number(value);
+  return isNaN(num) ? 'N/A' : num.toFixed(1);
+};
+
+const CustomTooltip = ({ active, payload, label, definitions }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.customTooltip}>
+        <p className={styles.tooltipLabel}>{label || payload[0].name}</p>
+        {payload.map((entry, index) => (
+          <div key={index} style={{ marginBottom: '8px' }}>
+            <span style={{ color: entry.color, fontWeight: 700 }}>{entry.name}: </span>
+            <span style={{ fontWeight: 800 }}>{entry.value}</span>
+            {definitions && definitions[entry.name] && (
+              <p className={styles.tooltipDesc}>{definitions[entry.name]}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+const InfoTooltip = ({ text }) => (
+  <div className={styles.infoTooltipWrapper}>
+    <Info size={14} className="text-gray-400 cursor-help" />
+    <span className={styles.infoTooltipText}>{text}</span>
+  </div>
+);
 
 function AdminDashboardContent({ user }) {
-  const [activeTab, setActiveTab] = useState('submissions'); 
   const [submissions, setSubmissions] = useState([]);
-  const [academicStats, setAcademicStats] = useState([]);
   const [allEvaluations, setAllEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Filters & Sorting with Persistence
-  const [academicSortField, setAcademicSortField] = useState('catedra');
-  const [academicSortOrder, setAcademicSortOrder] = useState('asc');
-  
-  // Persisted Filter: Carrera
-  const [academicFilterCarrera, setAcademicFilterCarrera] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('gala_filter_carrera') || '';
-    }
-    return '';
-  });
-
-  const [academicSearch, setAcademicSearch] = useState('');
-  const [evalSortField, setEvalSortField] = useState('createdAt');
-  const [evalSortOrder, setEvalSortOrder] = useState('desc');
-  const [evalSearch, setEvalSearch] = useState('');
-
-  const [filterUbicacion, setFilterUbicacion] = useState('');
-  const [filterTipo, setFilterTipo] = useState('');
-  const [filterStatus, setFilterStatus] = useState('pending');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [activeSection, setActiveSection] = useState('vision');
 
-  // Persist Filter on Change
-  useEffect(() => {
-    localStorage.setItem('gala_filter_carrera', academicFilterCarrera);
-  }, [academicFilterCarrera]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('pending');
 
+  const [filtroCalidad, setFiltroCalidad] = useState('total');
+  const [subFiltro, setSubFiltro] = useState('');
 
-  // Fetch Data using Skills
+  const [busquedaBitacora, setBusquedaBitacora] = useState('');
+
   useEffect(() => {
     if (!user) return;
-    
     setLoading(true);
     let unsubscribeSub = null;
 
     const fetchData = async () => {
       try {
-        if (activeTab === 'submissions' || activeTab === 'analytics') {
-          unsubscribeSub = adminSkill.subscribeSubmissions(
-            (data) => {
-              setSubmissions(data);
-              if (activeTab === 'submissions') setLoading(false);
-            },
-            (error) => {
-              console.error("Error en listener de trámites:", error);
-              setLoading(false);
-            }
-          );
-        }
-
-        if (activeTab === 'academic') {
-          const data = await evaluacionSkill.getCatedrasWithStats();
-          setAcademicStats(data);
-          setLoading(false);
-        } else if (activeTab === 'evaluations') {
-          const evaluationsData = await getAllEvaluations();
-          setAllEvaluations(evaluationsData);
-          setLoading(false);
-        } else if (activeTab === 'analytics') {
-          const [stats, evals] = await Promise.all([
-            evaluacionSkill.getCatedrasWithStats(),
-            getAllEvaluations()
-          ]);
-          setAcademicStats(stats);
-          setAllEvaluations(evals);
-          // setLoading se llama dentro del listener de submissions arriba
-        }
+        unsubscribeSub = adminSkill.subscribeSubmissions(
+          (data) => {
+            setSubmissions(data);
+            setLoading(false);
+          },
+          (error) => console.error(error)
+        );
+        const evals = await getAllEvaluations();
+        setAllEvaluations(evals);
       } catch (error) {
-        console.error("Error cargando datos:", error);
+        console.error(error);
         setLoading(false);
       }
     };
     
     fetchData();
-    return () => {
-      if (unsubscribeSub) unsubscribeSub();
-    };
-  }, [user, activeTab]);
+    return () => unsubscribeSub && unsubscribeSub();
+  }, [user]);
 
-  const sortData = (data, field, order) => {
-    return [...data].sort((a, b) => {
-      let valA = field.split('.').reduce((obj, key) => obj?.[key], a);
-      let valB = field.split('.').reduce((obj, key) => obj?.[key], b);
-      
-      if (typeof valA === 'string') valA = valA.toLowerCase();
-      if (typeof valB === 'string') valB = valB.toLowerCase();
-      
-      if (valA < valB) return order === 'asc' ? -1 : 1;
-      if (valA > valB) return order === 'asc' ? 1 : -1;
-      return 0;
+  const analytics = useMemo(() => {
+    const now = new Date();
+    const last7Days = subDays(now, 7);
+    const last30Days = subDays(now, 30);
+
+    const currentWeekSubmissions = submissions.filter(s => s.createdAt?.toDate && isAfter(s.createdAt.toDate(), last7Days));
+    const prevWeekSubmissions = submissions.filter(s => s.createdAt?.toDate && isAfter(s.createdAt.toDate(), subDays(now, 14)) && !isAfter(s.createdAt.toDate(), last7Days));
+    const growth = prevWeekSubmissions.length > 0 
+      ? ((currentWeekSubmissions.length - prevWeekSubmissions.length) / prevWeekSubmissions.length * 100).toFixed(1)
+      : 100;
+
+    const sparklineData = eachDayOfInterval({ start: last7Days, end: now }).map(day => ({
+      value: submissions.filter(s => s.createdAt?.toDate && format(s.createdAt.toDate(), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')).length
+    }));
+
+    const completed = submissions.filter(s => s.status === 'completed');
+    const avgResolutionHours = completed.length > 0 && completed[0].completedAt
+      ? (completed.reduce((acc, s) => acc + (s.completedAt?.toDate ? differenceInHours(s.completedAt.toDate(), s.createdAt.toDate()) : 0), 0) / completed.length).toFixed(1)
+      : 0;
+
+    const alertsCount = submissions.filter(s => s.status === 'pending' && s.createdAt?.toDate && !isAfter(s.createdAt.toDate(), subDays(now, 2))).length;
+
+    // Tasa de Efectividad Logic
+    const tasaEfectividad = submissions.length > 0 
+      ? ((completed.length / submissions.length) * 100).toFixed(1)
+      : 0;
+
+    const flowData = eachDayOfInterval({ start: last30Days, end: now }).map(day => {
+      const dayISO = format(day, 'yyyy-MM-dd');
+      const dayIngresos = submissions.filter(s => s.createdAt?.toDate && format(s.createdAt.toDate(), 'yyyy-MM-dd') === dayISO).length;
+      const dayEgresos = submissions.filter(s => s.status === 'completed' && s.completedAt?.toDate && format(s.completedAt.toDate(), 'yyyy-MM-dd') === dayISO);
+      const dayAvgResTime = dayEgresos.length > 0
+        ? dayEgresos.reduce((acc, s) => acc + differenceInHours(s.completedAt.toDate(), s.createdAt.toDate()), 0) / dayEgresos.length
+        : 0;
+
+      return {
+        name: format(day, 'dd/MM'),
+        ingresos: dayIngresos,
+        egresos: dayEgresos.length,
+        resTime: dayAvgResTime.toFixed(1)
+      };
     });
-  };
 
-  const processedAcademic = useMemo(() => {
-    // Escaneo de trazabilidad en frontend
-    console.log('[Dashboard] Datos para tabla academic:', academicStats);
-    
-    if (!academicStats || academicStats.length === 0) return [];
+    const statusMap = submissions.reduce((acc, s) => {
+      const status = s.status || 'pending';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+    const donutData = Object.entries(statusMap).map(([name, value]) => ({ name, value }));
 
-    let filtered = academicStats.filter(t => (t.stats?.count || t.evaluacionesCount || 0) > 0);
-    
-    if (academicFilterCarrera) {
-      filtered = filtered.filter(t => t.carrera === academicFilterCarrera);
+    const carreraMap = submissions.reduce((acc, s) => {
+      const c = s.carrera || 'Otras';
+      acc[c] = (acc[c] || 0) + 1;
+      return acc;
+    }, {});
+    const carreraData = Object.entries(carreraMap).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5);
+
+    const subjects = [...new Set(allEvaluations.map(e => e.catedra).filter(Boolean))].sort();
+
+    // Data filtering for Radar Chart
+    let filteredEvals = allEvaluations;
+    if (filtroCalidad === 'anio' && subFiltro) {
+      filteredEvals = allEvaluations.filter(e => e.anioLectivo === subFiltro || e.anio === subFiltro);
+    } else if (filtroCalidad === 'materia' && subFiltro) {
+      filteredEvals = allEvaluations.filter(e => e.catedra === subFiltro);
     }
-    
-    if (academicSearch) {
-      const searchLower = academicSearch.toLowerCase();
-      filtered = filtered.filter(t => 
-        (t.catedraNombre || t.catedra || "").toLowerCase().includes(searchLower)
-      );
-    }
-    
-    const sorted = sortData(filtered, academicSortField, academicSortOrder);
-    console.log('[Dashboard] Cátedras tras filtros:', sorted.length);
-    return sorted;
-  }, [academicStats, academicFilterCarrera, academicSearch, academicSortField, academicSortOrder]);
 
-  const kpisSubmissions = useMemo(() => {
-    const total = submissions.length;
-    const completed = submissions.filter(s => s.status === 'completed').length;
-    const tasa = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
-    const sla = adminSkill.calculateSLA(submissions);
-    return { total, tasa, sla };
-  }, [submissions]);
+    const avgIndices = {
+      ICT: filteredEvals.reduce((acc, e) => acc + (e.ict || 0), 0) / (filteredEvals.length || 1),
+      NDC: filteredEvals.reduce((acc, e) => acc + (e.ndc || 0), 0) / (filteredEvals.length || 1),
+      CAT: filteredEvals.reduce((acc, e) => acc + (e.cat || 0), 0) / (filteredEvals.length || 1),
+      TCE: filteredEvals.reduce((acc, e) => acc + (e.tce || 0), 0) / (filteredEvals.length || 1),
+    };
+    const radarData = [
+      { subject: 'Claridad (ICT)', A: (avgIndices.ICT * 20).toFixed(0), fullMark: 100 },
+      { subject: 'Material (NDC)', A: (avgIndices.NDC * 20).toFixed(0), fullMark: 100 },
+      { subject: 'Evaluación (CAT)', A: (avgIndices.CAT * 20).toFixed(0), fullMark: 100 },
+      { subject: 'Empatía (TCE)', A: (avgIndices.TCE * 20).toFixed(0), fullMark: 100 },
+    ];
 
-  const processedEvaluations = useMemo(() => {
-    let filtered = allEvaluations;
-    if (academicFilterCarrera) filtered = filtered.filter(e => e.carrera === academicFilterCarrera);
-    if (evalSearch) filtered = filtered.filter(e => e.catedra.toLowerCase().includes(evalSearch.toLowerCase()));
-    return sortData(filtered, evalSortField, evalSortOrder);
-  }, [allEvaluations, academicFilterCarrera, evalSearch, evalSortField, evalSortOrder]);
+    return { total: submissions.length, growth, sparklineData, avgResolutionHours, alertsCount, tasaEfectividad, flowData, donutData, carreraData, radarData, subjects };
+  }, [submissions, allEvaluations, filtroCalidad, subFiltro]);
 
   const filteredSubmissions = useMemo(() => {
     return submissions.filter(sub => {
-      const matchUbicacion = filterUbicacion ? sub.ubicacion === filterUbicacion : true;
-      const matchTipo = filterTipo ? sub.tipoSolicitud === filterTipo : true;
-      const matchStatus = filterStatus ? sub.status === filterStatus : true;
-      const searchLower = searchQuery.toLowerCase();
-      const matchSearch = searchQuery 
-        ? (sub.nombre?.toLowerCase().includes(searchLower) || sub.dni?.includes(searchQuery))
-        : true;
-        
-      return matchUbicacion && matchTipo && matchSearch && matchStatus;
+      const matchSearch = searchQuery === '' || 
+        sub.nombre?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        sub.dni?.includes(searchQuery) ||
+        sub.tipoSolicitud?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchStatus = filterStatus === '' || sub.status === filterStatus;
+      return matchSearch && matchStatus;
     });
-  }, [submissions, filterUbicacion, filterTipo, searchQuery, filterStatus]);
+  }, [submissions, searchQuery, filterStatus]);
 
-  const formatDate = (ts) => {
-    if (ts && typeof ts.toDate === 'function') {
-      return format(ts.toDate(), 'dd/MM/yyyy HH:mm');
+  const bitacoraFiltrada = useMemo(() => {
+    if (!busquedaBitacora) return allEvaluations;
+    const termino = busquedaBitacora.toLowerCase();
+    return allEvaluations.filter(item => {
+      const fechaStr = item.createdAt?.toDate ? format(item.createdAt.toDate(), 'dd/MM/yyyy') : '';
+      return (
+        (item.catedra && item.catedra.toLowerCase().includes(termino)) ||
+        (item.accionExcelencia && item.accionExcelencia.toLowerCase().includes(termino)) ||
+        (item.tipoGestion && item.tipoGestion.toLowerCase().includes(termino)) ||
+        (item.estudiante && item.estudiante.toLowerCase().includes(termino)) ||
+        (fechaStr.includes(termino))
+      );
+    });
+  }, [allEvaluations, busquedaBitacora]);
+
+  const exportToCSV = () => {
+    const headers = ["Fecha", "Estudiante", "Trámite", "Prioridad", "Responsable", "Estado"];
+    const rows = filteredSubmissions.map(sub => [
+      sub.createdAt?.toDate ? format(sub.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A',
+      sub.nombre,
+      sub.tipoSolicitud,
+      sub.priority || 'Media',
+      sub.responsable || 'Sin Asignar',
+      sub.status === 'completed' ? 'Completado' : 'Pendiente'
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Reporte_Gestion_GALA.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const scrollTo = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+      setActiveSection(id);
     }
-    return 'N/A';
   };
 
   const handleUpdateStatus = async (id, status) => {
-    await adminSkill.updateStatus(id, status);
+    try {
+      await adminSkill.updateStatus(id, status);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar este registro?")) {
-      await adminSkill.deleteRecord(id);
-    }
-  };
-
-  const handleLogout = async () => {
-    await logoutAdmin();
-  };
-
-  // Professional Export with Institutional Headers
-  const handleExportExcel = async () => {
-    const pendingSubmissions = submissions.filter(s => s.status === 'pending');
-    
-    if (loading || pendingSubmissions.length === 0) {
-      alert("No hay trámites pendientes para exportar.");
-      return;
-    }
-
-    const reportData = adminSkill.prepareExportData(pendingSubmissions);
-
-    const metadata = [
-      ["ALTERNATIVA TECNOLÓGICA - GESTIÓN INSTITUCIONAL"],
-      ["REPORTE DE MESA DE ENTRADA DIGITAL"],
-      [`Fecha de Generación: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`],
-      [""],
-      ["Fecha", "Estudiante", "DNI", "Carrera", "Sede", "Trámite", "Estado", "Descripción"]
-    ];
-
-    const wsData = [...metadata, ...reportData.map(r => Object.values(r))];
-    const worksheet = XLSX.utils.aoa_to_sheet(wsData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Trámites");
-    
-    XLSX.writeFile(workbook, `GALA_MesaEntrada_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
-
-    if (window.confirm("¿Deseas marcar todos los trámites exportados como COMPLETADOS?")) {
-      for (const sub of pendingSubmissions) {
-        await adminSkill.updateStatus(sub.id, 'completed');
+    if (window.confirm('¿Desea eliminar este expediente definitivamente?')) {
+      try {
+        await adminSkill.deleteRecord(id);
+      } catch (error) {
+        console.error(error);
       }
     }
   };
 
-  const handleExportAcademicSummary = () => {
-    if (loading || processedAcademic.length === 0) return;
-
-    const metadata = [
-      ["ALTERNATIVA TECNOLÓGICA - GESTIÓN ESTRATÉGICA"],
-      ["RESUMEN CONSOLIDADO DE EXCELENCIA ACADÉMICA"],
-      [`Fecha de Reporte: ${format(new Date(), 'dd/MM/yyyy')}`],
-      [""],
-      ["Carrera", "Cátedra", "Evaluaciones", "Promedio Gral", "ICT", "NDC", "CAT", "TCE", "Feedback"]
-    ];
-
-    const dataRows = processedAcademic.map(t => [
-      t.carrera,
-      t.catedra,
-      t.stats.count,
-      formatMetric(t.stats.promedioGeneral),
-      formatMetric(t.stats.ict),
-      formatMetric(t.stats.ndc),
-      formatMetric(t.stats.cat),
-      formatMetric(t.stats.tce),
-      (t.stats.feedback || []).join(" | ")
-    ]);
-
-    const worksheet = XLSX.utils.aoa_to_sheet([...metadata, ...dataRows]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Resumen_Cátedras");
-    XLSX.writeFile(workbook, `GALA_Excelencia_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+  const formatearValor = (val) => (val && !isNaN(val) ? Number(val).toFixed(1) : '-');
+  
+  const obtenerColorSemaforo = (val) => {
+    const n = Number(val);
+    if (!n) return '#9ca3af'; // Gris si no hay dato
+    if (n < 3) return '#dc2626'; // Rojo (Crítico)
+    if (n < 4) return '#d97706'; // Naranja/Amarillo (Regular)
+    return '#059669'; // Verde (Óptimo)
   };
 
-  const MetricGlossary = () => (
-    <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '1.5rem', border: '2px solid #e2e8f0', marginBottom: '32px' }}>
-      <h4 style={{ margin: '0 0 16px 0', color: '#3f75ab', fontWeight: '900', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <MessageSquare size={20} /> Referencia de Evaluación
-      </h4>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
-        {[
-          { s: 'ICT', t: 'Claridad Conceptual', d: 'Evalúa la capacidad de la cátedra para transmitir conocimientos de forma clara y aplicada.' },
-          { s: 'NDC', t: 'Disponibilidad de Material', d: 'Mide la integración tecnológica y organización del material digital.' },
-          { s: 'CAT', t: 'Criterio de Evaluación', d: 'Evalúa la coherencia entre lo enseñado y lo evaluado en los exámenes.' },
-          { s: 'TCE', t: 'Empatía y Sugerencias', d: 'Mide el trato humano, el compromiso y la predisposición para resolver dudas.' }
-        ].map(item => (
-          <div key={item.s}>
-            <div style={{ fontWeight: '900', color: '#000', fontSize: '0.9rem' }}>{item.s}: {item.t}</div>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4' }}>{item.d}</p>
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop: '16px', display: 'flex', gap: '24px', padding: '12px 0', borderTop: '1px solid #e2e8f0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
-          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' }}></span> 3.8 - 5.0: Excelente
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
-          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' }}></span> 2.6 - 3.7: Aceptable
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: '800' }}>
-          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }}></span> 1.0 - 2.5: Crítico
-        </div>
-      </div>
-    </div>
-  );
+  const calcularPromedioGeneral = (item) => {
+    const valores = [item.ict, item.ndc, item.cat, item.tce].map(Number).filter(n => !isNaN(n));
+    return valores.length > 0 ? (valores.reduce((a, b) => a + b, 0) / valores.length) : null;
+  };
 
+  const exportarCSV = (datos, nombreArchivo) => {
+    if (!datos || datos.length === 0) return alert('No hay datos para exportar.');
+    
+    // Extraer cabeceras (limpiando campos internos si existen)
+    const cabeceras = Object.keys(datos[0]).filter(k => k !== 'createdAt' && k !== 'completedAt');
+    
+    const filasCSV = datos.map(fila => 
+      cabeceras.map(cabecera => {
+        let valor = fila[cabecera] !== null && fila[cabecera] !== undefined ? fila[cabecera] : '';
+        valor = valor.toString().replace(/"/g, '""'); // Escapar comillas
+        return `"${valor}"`; // Envolver en comillas
+      }).join(',')
+    );
+    
+    const contenidoCSV = [cabeceras.join(','), ...filasCSV].join('\n');
+    const blob = new Blob(["\uFEFF" + contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${nombreArchivo}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (loading && submissions.length === 0) {
+    return <div className="h-screen w-full flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin" size={48} color="#005088" /></div>;
+  }
 
   return (
-    <div className="container" style={{ maxWidth: '1400px', padding: '40px 20px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px' }}>
-        <div>
-          <h1 style={{ fontSize: '3.5rem', fontWeight: '950', color: 'var(--color-primary)', letterSpacing: '-0.04em', margin: 0, fontFamily: 'var(--font-display)' }}>GALA Dashboard</h1>
-          <p style={{ fontSize: '1.2rem', color: 'var(--color-text)', fontWeight: '700', margin: 0 }}>Gestión Institucional de Alternativa Tecnológica</p>
+    <div style={{ display: 'flex', flexDirection: 'row', height: '100vh', width: '100vw', overflow: 'hidden', backgroundColor: '#f8fafc' }}>
+      
+      {/* SIDEBAR FIJO A LA IZQUIERDA */}
+      <aside style={{ width: '260px', backgroundColor: '#1e3a8a', color: 'white', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 20, boxShadow: '4px 0 10px rgba(0,0,0,0.1)' }}>
+        <div style={{ padding: '24px' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+            <ShieldCheck size={32} /> Consola GALA
+          </h2>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: '700' }}>
-              <Loader2 className="animate-spin" size={20} />
-              <span>Cargando métricas institucionales...</span>
-            </div>
-          )}
-          <button className="glass-button" style={{ background: '#000', color: '#fff', borderRadius: '1rem', padding: '12px 24px' }} onClick={handleLogout}>
-            <LogOut size={18} /> Cerrar Sesión
-          </button>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '40px' }}>
-        {[
-          { id: 'submissions', label: 'Mesa de Entrada', icon: Inbox },
-          { id: 'academic', label: 'Métricas de Cátedra', icon: BarChart2 },
-          { id: 'evaluations', label: 'Log de Excelencia', icon: History },
-          { id: 'analytics', label: 'Inteligencia Analítica', icon: TrendingUp }
-        ].map(tab => (
+        <nav style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
           <button 
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{ 
-              flex: 1, 
-              padding: '20px', 
-              borderRadius: '1.5rem', 
-              fontSize: '1.1rem', 
-              fontWeight: '900',
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '12px',
-              background: activeTab === tab.id ? 'var(--color-primary)' : '#ffffff',
-              color: activeTab === tab.id ? '#fff' : 'var(--color-text)',
-              border: '4px solid var(--color-primary)',
-              boxShadow: activeTab === tab.id ? '6px 6px 0px 0px rgba(0,51,102,1)' : 'none',
-              transition: 'all 0.3s'
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px', textAlign: 'left', backgroundColor: activeSection === 'vision' ? '#1e40af' : 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
+            onClick={() => scrollTo('vision')}
           >
-            <tab.icon size={24} /> {tab.label}
+            <LayoutDashboard size={20}/> Visión Estratégica
           </button>
-        ))}
-      </div>
+          <button 
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px', textAlign: 'left', backgroundColor: activeSection === 'tendencias' ? '#1e40af' : 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
+            onClick={() => scrollTo('tendencias')}
+          >
+            <BarChart3 size={20}/> Análisis de Tendencias
+          </button>
+          <button 
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px', textAlign: 'left', backgroundColor: activeSection === 'calidad' ? '#1e40af' : 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
+            onClick={() => scrollTo('calidad')}
+          >
+            <GraduationCap size={20}/> Monitor de Calidad
+          </button>
+          <button 
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px', textAlign: 'left', backgroundColor: activeSection === 'bitacora' ? '#1e40af' : 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
+            onClick={() => scrollTo('bitacora')}
+          >
+            <ClipboardList size={20}/> Bitácora de Gestión
+          </button>
+          <button 
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px', textAlign: 'left', backgroundColor: activeSection === 'operativa' ? '#1e40af' : 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
+            onClick={() => scrollTo('operativa')}
+          >
+            <Activity size={20}/> Grilla Operativa
+          </button>
+        </nav>
 
-      {/* Views */}
-      {activeTab === 'submissions' && (
-        <div className="animate-fade-in">
-          {/* KPI Cards Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px', marginBottom: '40px' }}>
-            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px var(--color-primary)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ background: 'var(--color-primary)15', padding: '10px', borderRadius: '4px', color: 'var(--color-primary)' }}>
-                  <Inbox size={24} />
+        <div style={{ padding: '16px', borderTop: '1px solid #1e40af', marginTop: 'auto' }}>
+          <button 
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px', textAlign: 'left', backgroundColor: 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
+            onClick={logoutAdmin}
+          >
+            <LogOut size={20}/> Cerrar Sesión
+          </button>
+        </div>
+      </aside>
+
+      {/* CONTENIDO PRINCIPAL A LA DERECHA */}
+      <main style={{ flex: 1, height: '100%', overflowY: 'auto', position: 'relative', padding: '32px' }}>
+        <div className="max-w-7xl mx-auto">
+          <header className={styles.stickyHeader}>
+            <div>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#1e3a8a', margin: 0 }}>Intelligence Unit v4.0</h1>
+              <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>Gestión Institucional de Alternativa Tecnológica</p>
+            </div>
+            <div className={styles.stickyHeaderActions}>
+              <button className={styles.actionBtn} onClick={exportToCSV}><Download size={18}/> Exportar Vista</button>
+            </div>
+          </header>
+
+          {/* SECTION: VISION ESTRATEGICA */}
+          <section id="vision" className={styles.contentSection}>
+            <h2 className={styles.sectionTitle}>Visión Estratégica</h2>
+            <div className={styles.kpiGrid}>
+              <div className={styles.chartCard}>
+                <div className={styles.flexBetween}>
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Demanda Total</span>
+                    <InfoTooltip text="Volumen de trámites ingresados. Mide la carga operativa y la tracción digital de la agrupación." />
+                  </div>
+                  <Inbox size={18} color="#1e3a8a" />
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Histórico</span>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#1e3a8a', margin: '0.5rem 0' }}>{analytics.total}</div>
+                <div className={styles.flexBetween}>
+                  <div style={{ width: '50%', height: '30px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={analytics.sparklineData}><Line type="monotone" dataKey="value" stroke="#1e3a8a" strokeWidth={2} dot={false}/></LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#10b981' }}>+{analytics.growth}%</span>
+                </div>
               </div>
-              <div style={{ fontSize: '3rem', fontWeight: '950', color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}>{kpisSubmissions.total}</div>
-              <div style={{ fontSize: '1rem', color: 'var(--color-text)', fontWeight: '700' }}>Trámites Recibidos</div>
+              
+              <div className={styles.chartCard}>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Promedio Resolución</span>
+                  <InfoTooltip text="Tiempo efectivo de respuesta. Indicador clave para exigir eficiencia administrativa." />
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#1e3a8a', margin: '0.5rem 0' }}>{analytics.avgResolutionHours}h</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>SLA Institucional UTN</div>
+              </div>
+
+              <div className={styles.chartCard}>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Estado Crítico</span>
+                  <InfoTooltip text="Trámites estancados por más de 48hs. Requieren intervención gremial inmediata." />
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#ef4444', margin: '0.5rem 0' }}>{analytics.alertsCount}</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Trámites {'>'} 48hs</div>
+              </div>
+
+              <div className={styles.chartCard}>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Tasa de Efectividad</span>
+                  <InfoTooltip text="Porcentaje de resolución real del Centro de Estudiantes." />
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#1e3a8a', margin: '0.5rem 0' }}>{analytics.tasaEfectividad}%</div>
+                <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700 }}>Resolución Institucional</div>
+              </div>
+            </div>
+            <p className={styles.methodologyText}>* Monitoreo dinámico de carga y resolución en tiempo real.</p>
+          </section>
+
+          {/* SECTION: TENDENCIAS */}
+          <section id="tendencias" className={styles.contentSection}>
+            <h2 className={styles.sectionTitle}>Análisis de Tendencias</h2>
+            <div className={styles.visualizationGrid}>
+              <div className={styles.chartCard}>
+                <div className="flex items-center gap-2 mb-6">
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Flujo de Ingresos vs. Egresos</h3>
+                  <InfoTooltip text="Visualiza cuellos de botella en el procesamiento de expedientes a lo largo del mes." />
+                </div>
+                <div style={{ height: '300px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={analytics.flowData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" hide />
+                      <YAxis hide />
+                      <YAxis yAxisId="right" orientation="right" hide />
+                      <Area type="monotone" dataKey="ingresos" name="Ingresos" stroke="#1e3a8a" fill="#1e3a8a" fillOpacity={0.1} strokeWidth={3} />
+                      <Area type="monotone" dataKey="egresos" name="Egresos" stroke="#ef4444" fill="transparent" strokeWidth={2} strokeDasharray="5 5" />
+                      <Line type="monotone" dataKey="resTime" name="Tiempo Res. (h)" stroke="#f59e0b" strokeWidth={2} dot={false} yAxisId="right" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className={styles.chartCard}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem' }}>Distribución de Estados</h3>
+                <div style={{ height: '300px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={analytics.donutData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                        {analytics.donutData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#1e3a8a', '#f59e0b', '#cbd5e1'][index % 3]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* GLOSARIO DE METRICAS ACADEMICAS */}
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', borderLeft: '4px solid #1e3a8a', border: '1px solid #f1f5f9', padding: '24px', marginBottom: '32px' }}>
+            {/* Header de la Tarjeta: Ícono y Título alineados */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <span style={{ color: '#1e3a8a' }}>
+                <BookOpen size={24} />
+              </span>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1e3a8a', margin: 0 }}>
+                Referencias de Auditoría Académica
+              </h3>
             </div>
 
-            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px var(--color-accent)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ background: 'var(--color-accent)15', padding: '10px', borderRadius: '4px', color: 'var(--color-accent)' }}>
-                  <CheckCircle2 size={24} />
-                </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--color-accent)', textTransform: 'uppercase' }}>Eficiencia</span>
-              </div>
-              <div style={{ fontSize: '3rem', fontWeight: '950', color: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}>{kpisSubmissions.tasa}%</div>
-              <div style={{ fontSize: '1rem', color: 'var(--color-text)', fontWeight: '700' }}>Tasa de Resolución</div>
-            </div>
-
-            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', boxShadow: '8px 8px 0px 0px var(--color-primary)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ background: 'var(--color-primary)15', padding: '10px', borderRadius: '4px', color: 'var(--color-primary)' }}>
-                  <Clock size={24} />
-                </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>SLA Gestión</span>
-              </div>
-              <div style={{ fontSize: '3rem', fontWeight: '950', color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}>{kpisSubmissions.sla}</div>
-              <div style={{ fontSize: '1rem', color: 'var(--color-text)', fontWeight: '700' }}>Tiempo de Respuesta</div>
+            {/* Cuerpo: Párrafos separados por espacio */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.875rem', color: '#374151' }}>
+              <p style={{ margin: 0 }}>
+                <strong style={{ color: '#1e3a8a' }}>ICT (Claridad Conceptual):</strong> Mide la capacidad docente para transmitir conocimiento. <em style={{ color: '#6b7280' }}>Utilidad: Exigir tutorías de apoyo o revisión pedagógica.</em>
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong style={{ color: '#1e3a8a' }}>NDC (Disponibilidad de Material):</strong> Evalúa el acceso a recursos de estudio. <em style={{ color: '#6b7280' }}>Utilidad: Reclamar digitalización de apuntes o subsidios de impresión.</em>
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong style={{ color: '#1e3a8a' }}>CAT (Criterio de Evaluación):</strong> Mide la coherencia entre lo que se enseña y lo que se toma. <em style={{ color: '#6b7280' }}>Utilidad: Herramienta legal para apelar aplazos masivos.</em>
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong style={{ color: '#1e3a8a' }}>TCE (Empatía y Trato):</strong> Evalúa el factor humano y la predisposición. <em style={{ color: '#6b7280' }}>Utilidad: Intervenir gremialmente ante maltrato o abuso de poder.</em>
+              </p>
             </div>
           </div>
 
-          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
-            <div style={{ flex: '1 1 300px', position: 'relative' }}>
-              <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
-              <input type="text" placeholder="Buscar por DNI o Nombre..." className="glass-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '4px', border: '2px solid var(--color-primary)' }} />
+          {/* SECTION: MONITOR CALIDAD ACADEMICA */}
+          <section id="calidad" className={styles.contentSection}>
+            <h2 className={styles.sectionTitle}>Monitor de Calidad Académica</h2>
+            
+            {/* PANEL DE CONTROL DE FILTROS */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', backgroundColor: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #f3f4f6' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '8px', textTransform: 'uppercase' }}>Nivel de Análisis</label>
+                <select 
+                  value={filtroCalidad}
+                  onChange={(e) => { setFiltroCalidad(e.target.value); setSubFiltro(''); }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', backgroundColor: '#f9fafb', color: '#374151', fontSize: '0.875rem' }}
+                >
+                  <option value="total">Consolidado Institucional (Todas)</option>
+                  <option value="anio">Agrupado por Año de Cursado</option>
+                  <option value="materia">Materia Específica</option>
+                </select>
+              </div>
+
+              {/* Renderizado condicional del segundo selector */}
+              {filtroCalidad === 'anio' && (
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '8px', textTransform: 'uppercase' }}>Seleccionar Año</label>
+                  <select 
+                    value={subFiltro}
+                    onChange={(e) => setSubFiltro(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', backgroundColor: '#f9fafb', color: '#374151', fontSize: '0.875rem' }}
+                  >
+                    <option value="">-- Elegir Año --</option>
+                    <option value="1">1er Año</option>
+                    <option value="2">2do Año</option>
+                    <option value="3">3er Año</option>
+                    <option value="4">4to Año</option>
+                    <option value="5">5to Año</option>
+                  </select>
+                </div>
+              )}
+
+              {filtroCalidad === 'materia' && (
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '8px', textTransform: 'uppercase' }}>Buscar Materia</label>
+                  <select 
+                    value={subFiltro}
+                    onChange={(e) => setSubFiltro(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', backgroundColor: '#f9fafb', color: '#374151', fontSize: '0.875rem' }}
+                  >
+                    <option value="">-- Elegir Materia --</option>
+                    {analytics.subjects.map((subject, idx) => (
+                      <option key={idx} value={subject}>{subject}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className={styles.academicGrid}>
+              <div className={styles.chartCard}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem' }}>Perfil de Excelencia Institucional</h3>
+                <div style={{ height: '350px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={analytics.radarData}>
+                      <PolarGrid stroke="#e2e8f0" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} hide />
+                      <Radar name="Promedio Gral" dataKey="A" stroke="#1e3a8a" fill="#1e3a8a" fillOpacity={0.6} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className={styles.chartCard}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1rem' }}>Ranking por Carrera</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {analytics.carreraData.map((c, i) => (
+                    <div key={i} className={styles.flexBetween} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '0.75rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>{c.name}</span>
+                      <span style={{ fontWeight: 800, color: '#1e3a8a' }}>{c.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION: BITACORA DE GESTION */}
+          <section id="bitacora" className={styles.contentSection} style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Bitácora de Gestión</h2>
+              <button 
+                onClick={() => exportarCSV(bitacoraFiltrada, 'Bitacora_Gestion_Filtrada')}
+                style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <Download size={18} /> Descargar Excel (Bitácora)
+              </button>
+            </div>
+
+            {/* Barra de Búsqueda Omnidireccional */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', alignItems: 'center', backgroundColor: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #f3f4f6' }}>
+              <span style={{ color: '#94a3b8' }}><Search size={18} /></span>
+              <input 
+                type="text" 
+                placeholder="Buscar por cátedra, estudiante, fecha, feedback o tipo de gestión..." 
+                value={busquedaBitacora}
+                onChange={(e) => setBusquedaBitacora(e.target.value)}
+                style={{ flex: 1, padding: '8px 0', border: 'none', outline: 'none', fontSize: '0.875rem', backgroundColor: 'transparent' }}
+              />
             </div>
             
-            <select className="glass-input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', borderRadius: '4px', border: '2px solid var(--color-primary)' }}>
-              <option value="pending">Solo Pendientes</option>
-              <option value="completed">Solo Completados</option>
-              <option value="">Todos los estados</option>
-            </select>
-
-            <button className="glass-button" style={{ background: 'var(--color-accent)', color: '#fff', borderRadius: '4px', border: 'none' }} onClick={handleExportExcel}>
-              <Download size={18} /> Exportar Pendientes (.xlsx)
-            </button>
-          </div>
-
-          <div style={{ background: '#ffffff', borderRadius: '4px', overflow: 'hidden', border: '4px solid var(--color-primary)', boxShadow: '12px 12px 0px 0px var(--color-primary)33' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--color-bg)', borderBottom: '4px solid var(--color-primary)' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Fecha</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Estudiante</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Trámite</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Estado</th>
-                  <th style={{ padding: '24px', textAlign: 'right', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSubmissions.map(sub => (
-                  <tr key={sub.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '24px', fontWeight: '700', color: '#6b7280' }}>{formatDate(sub.createdAt)}</td>
-                    <td style={{ padding: '24px' }}>
-                      <div style={{ fontWeight: '900', color: '#000' }}>{sub.nombre}</div>
-                      <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>DNI: {sub.dni} | {sub.carrera}</div>
-                    </td>
-                    <td style={{ padding: '24px' }}>
-                      <span style={{ background: '#f3f4f6', padding: '6px 12px', borderRadius: '2rem', fontSize: '0.9rem', fontWeight: '800', color: '#3f75ab' }}>{sub.tipoSolicitud}</span>
-                    </td>
-                    <td style={{ padding: '24px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        {sub.status === 'completed' ? (
-                          <span style={{ color: '#10b981', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={18} /> COMPLETADO</span>
-                        ) : (
-                          <span style={{ color: '#f59e0b', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={18} /> PENDIENTE</span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '24px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button onClick={() => setSelectedSubmission(sub)} className="glass-button-icon" style={{ color: '#3f75ab' }}><Eye size={22} /></button>
-                        <button 
-                          onClick={() => sub.status === 'pending' && handleUpdateStatus(sub.id, 'completed')} 
-                          disabled={sub.status === 'completed'}
-                          className="glass-button-icon"
-                          style={{ 
-                            background: sub.status === 'completed' ? '#10b981' : '#3f75ab', 
-                            color: '#fff',
-                            opacity: sub.status === 'completed' ? 0.7 : 1
-                          }}
-                        >
-                          <CheckCircle2 size={22} />
-                        </button>
-                        <button onClick={() => handleDelete(sub.id)} className="glass-button-icon" style={{ color: '#ef5f27', background: 'rgba(239, 95, 39, 0.1)' }}><Trash2 size={22} /></button>
-                      </div>
-                    </td>
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflowX: 'auto', border: '1px solid #f1f5f9' }}>
+              <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                <thead style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <tr>
+                    <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 800, whiteSpace: 'nowrap', textTransform: 'uppercase' }}>FECHA</th>
+                    <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 800, whiteSpace: 'nowrap', textTransform: 'uppercase' }}>CÁTEDRA</th>
+                    <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 800, whiteSpace: 'nowrap', textTransform: 'uppercase', textAlign: 'center' }}>GENERAL</th>
+                    <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 800, whiteSpace: 'nowrap', textTransform: 'uppercase' }}>MÉTRICAS (I | N | C | T)</th>
+                    <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 800, textTransform: 'uppercase' }}>FEEDBACK ACADÉMICO</th>
+                    <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 800, whiteSpace: 'nowrap', textTransform: 'uppercase' }}>TIPO DE GESTIÓN</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                </thead>
+                <tbody>
+                  {bitacoraFiltrada.length > 0 ? bitacoraFiltrada.map((item, idx) => {
+                    const promedio = calcularPromedioGeneral(item);
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: '#64748b' }}>
+                          {item.createdAt?.toDate ? format(item.createdAt.toDate(), 'dd/MM/yyyy') : 'N/A'}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#1e3a8a', whiteSpace: 'nowrap' }}>
+                          {item.catedra}
+                        </td>
+                        
+                        {/* Columna: Resultado General con Badge */}
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                          <span style={{ 
+                            backgroundColor: obtenerColorSemaforo(promedio), 
+                            color: 'white', 
+                            padding: '4px 10px', 
+                            borderRadius: '12px', 
+                            fontWeight: 'bold',
+                            fontSize: '0.75rem'
+                          }}>
+                            {formatearValor(promedio)}
+                          </span>
+                        </td>
 
-      {activeTab === 'academic' && (
-        <div className="animate-fade-in">
-          <MetricGlossary />
-          
-          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
-            <div style={{ flex: '1 1 300px', position: 'relative' }}>
-              <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
-              <input type="text" placeholder="Buscar Cátedra..." className="glass-input" value={academicSearch} onChange={(e) => setAcademicSearch(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '4px', border: '2px solid var(--color-primary)' }} />
+                        {/* Columna: Métricas Desglosadas con Semáforo de Texto */}
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>
+                          <span style={{ color: obtenerColorSemaforo(item.ict) }}>I:{formatearValor(item.ict)}</span> <span style={{color: '#cbd5e1'}}>|</span>{' '}
+                          <span style={{ color: obtenerColorSemaforo(item.ndc) }}>N:{formatearValor(item.ndc)}</span> <span style={{color: '#cbd5e1'}}>|</span>{' '}
+                          <span style={{ color: obtenerColorSemaforo(item.cat) }}>C:{formatearValor(item.cat)}</span> <span style={{color: '#cbd5e1'}}>|</span>{' '}
+                          <span style={{ color: obtenerColorSemaforo(item.tce) }}>T:{formatearValor(item.tce)}</span>
+                        </td>
+                        
+                        <td style={{ padding: '12px 16px', minWidth: '250px' }}>
+                          {item.accionExcelencia || <span style={{ color: '#94a3b8' }}>Pendiente</span>}
+                        </td>
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                            {item.tipoGestion || 'Académico'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr>
+                      <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                        No se encontraron registros para la búsqueda actual.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '4px', border: '2px solid var(--color-primary)' }}>
-              <option value="">Todas las Carreras</option>
-              <option value="Ingeniería en Sistemas de Información">Sistemas</option>
-              <option value="Ingeniería Electrónica">Electrónica</option>
-            </select>
-            <button className="glass-button" style={{ background: 'var(--color-primary)', color: '#fff' }} onClick={handleExportAcademicSummary}><Download size={18} /> Exportar Resumen</button>
-          </div>
+          </section>
 
-          <div style={{ background: '#ffffff', borderRadius: '4px', overflow: 'hidden', border: '4px solid var(--color-primary)', boxShadow: '12px 12px 0px 0px var(--color-primary)33' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--color-bg)', borderBottom: '4px solid var(--color-primary)' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Cátedra / Materia</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Evaluaciones</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Promedio</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Desglose de Calidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {processedAcademic.map(t => {
-                  const statusInfo = getInstitutionalStatus(t.stats.promedioGeneral);
-                  return (
-                    <tr key={t.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '24px' }}>
-                        <div style={{ fontWeight: '900', color: '#000', fontSize: '1.1rem' }}>{t.catedraNombre || t.catedra}</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>{t.carrera}</div>
+          {/* SECTION: GRILLA OPERATIVA */}
+          <section id="operativa" className={styles.contentSection}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Grilla Operativa (Mesa de Entrada)</h2>
+              <button 
+                onClick={() => exportarCSV(filteredSubmissions, 'Grilla_Operativa_GALA')}
+                style={{ backgroundColor: '#059669', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <Download size={18} /> Descargar Excel (Grilla)
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', alignItems: 'center', backgroundColor: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #f3f4f6' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar por estudiante, DNI o trámite..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px 10px 40px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', fontSize: '0.875rem', transition: 'border-color 0.2s' }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1e3a8a'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                />
+              </div>
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', backgroundColor: '#f9fafb', fontSize: '0.875rem', minWidth: '160px', cursor: 'pointer' }}
+              >
+                <option value="">Todos los Estados</option>
+                <option value="pending">Pendientes</option>
+                <option value="completed">Completados</option>
+              </select>
+            </div>
+
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+              <table className={styles.dataTable} style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', color: '#64748b' }}>ESTUDIANTE</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', color: '#64748b' }}>TRÁMITE</th>
+                    <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>PRIORIDAD</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', color: '#64748b' }}>RESPONSABLE</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.75rem', color: '#64748b' }}>ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSubmissions.map(sub => (
+                    <tr key={sub.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ fontWeight: 700 }}>{sub.nombre}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>DNI: {sub.dni}</div>
                       </td>
-                      <td style={{ padding: '24px', textAlign: 'center', fontWeight: '900' }}>{t.evaluacionesCount || t.stats?.count || 0}</td>
-                      <td style={{ padding: '24px', textAlign: 'center' }}>
-                        <span style={{ background: statusInfo.bg, color: statusInfo.text, padding: '8px 16px', borderRadius: '2rem', fontWeight: '900', border: `2px solid ${statusInfo.text}20` }}>
-                          {formatMetric(t.promedioGeneral || t.stats?.promedioGeneral)}
-                        </span>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ fontWeight: 600, color: '#475569' }}>{sub.tipoSolicitud}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{sub.carrera}</div>
                       </td>
-                      <td style={{ padding: '24px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                          {[
-                            { l: 'ICT', v: t.desglose?.ICT || t.stats?.ict },
-                            { l: 'NDC', v: t.desglose?.NDC || t.stats?.ndc },
-                            { l: 'CAT', v: t.desglose?.CAT || t.stats?.cat },
-                            { l: 'TCE', v: t.desglose?.TCE || t.stats?.tce }
-                          ].map(m => {
-                            const mStatus = getInstitutionalStatus(m.v);
-                            return (
-                              <div key={m.l} style={{ textAlign: 'center', background: mStatus.bg, padding: '8px', borderRadius: '10px' }}>
-                                <div style={{ fontSize: '0.7rem', fontWeight: '900', color: mStatus.text }}>{m.l}</div>
-                                <div style={{ fontWeight: '900', color: mStatus.text }}>{formatMetric(m.v)}</div>
-                              </div>
-                            );
-                          })}
+                      <td style={{ padding: '1rem', textAlign: 'center' }}>
+                        <span className={`${styles.badge} ${styles[`priority${sub.priority || 'Media'}`]}`}>{sub.priority || 'Media'}</span>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <select 
+                          className="text-sm bg-transparent border-b border-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer py-1"
+                          defaultValue={sub.responsable || "Sin Asignar"}
+                          onChange={(e) => adminSkill.updateAssignment(sub.id, e.target.value)}
+                        >
+                          <option value="Sin Asignar">Sin Asignar</option>
+                          <option value="Rafael Salazar">Rafael Salazar</option>
+                          <option value="Gala Bórquez">Gala Bórquez</option>
+                          <option value="Felipe Cruz">Felipe Cruz</option>
+                          <option value="Equipo Soporte">Equipo Soporte</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1e3a8a' }} onClick={() => setSelectedSubmission(sub)}><Eye size={18}/></button>
+                          {sub.status === 'pending' && <button style={{ background: '#1e3a8a', border: 'none', color: 'white', padding: '0.25rem', borderRadius: '0.25rem', cursor: 'pointer' }} onClick={() => handleUpdateStatus(sub.id, 'completed')}><CheckCircle2 size={16}/></button>}
+                          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} onClick={() => handleDelete(sub.id)}><Trash2 size={18}/></button>
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'evaluations' && (
-        <div className="animate-fade-in">
-          <MetricGlossary />
-          <div style={{ background: '#ffffff', padding: '32px', borderRadius: '4px', border: '3px solid var(--color-primary)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', boxShadow: '8px 8px 0px 0px rgba(0,0,0,0.1)' }}>
-            <div style={{ flex: '1 1 300px', position: 'relative' }}>
-              <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} size={20} />
-              <input type="text" placeholder="Buscar por Cátedra..." className="glass-input" value={evalSearch} onChange={(e) => setEvalSearch(e.target.value)} style={{ paddingLeft: '48px', width: '100%', borderRadius: '4px', border: '2px solid var(--color-primary)' }} />
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <select className="glass-input" value={academicFilterCarrera} onChange={(e) => setAcademicFilterCarrera(e.target.value)} style={{ flex: '1 1 200px', borderRadius: '4px', border: '2px solid var(--color-primary)' }}>
-              <option value="">Todas las Carreras</option>
-              <option value="Ingeniería en Sistemas de Información">Sistemas</option>
-              <option value="Ingeniería Electrónica">Electrónica</option>
-            </select>
-          </div>
-
-          <div style={{ background: '#ffffff', borderRadius: '4px', overflow: 'hidden', border: '4px solid var(--color-primary)', boxShadow: '12px 12px 0px 0px var(--color-primary)33' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--color-bg)', borderBottom: '4px solid var(--color-primary)' }}>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Fecha</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Cátedra / Carrera</th>
-                  <th style={{ padding: '24px', textAlign: 'center', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Puntajes</th>
-                  <th style={{ padding: '24px', textAlign: 'left', fontWeight: '900', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Acción para la Excelencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {processedEvaluations.map(evalu => (
-                  <tr key={evalu.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '24px', fontWeight: '700', color: '#6b7280', fontSize: '0.85rem' }}>{formatDate(evalu.createdAt)}</td>
-                    <td style={{ padding: '24px' }}>
-                      <div style={{ fontWeight: '900', color: '#000' }}>{evalu.catedra}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{evalu.carrera}</div>
-                    </td>
-                    <td style={{ padding: '24px' }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                        {[
-                          { l: 'I', v: evalu.ict },
-                          { l: 'N', v: evalu.ndc },
-                          { l: 'C', v: evalu.cat },
-                          { l: 'T', v: evalu.tce }
-                        ].map(p => (
-                          <div key={p.l} style={{ background: getInstitutionalStatus(p.v).bg, padding: '4px 8px', borderRadius: '6px', textAlign: 'center', minWidth: '36px' }}>
-                            <div style={{ fontSize: '0.6rem', fontWeight: '900', color: getInstitutionalStatus(p.v).text }}>{p.l}</div>
-                            <div style={{ fontWeight: '900', fontSize: '0.85rem', color: getInstitutionalStatus(p.v).text }}>{formatMetric(p.v)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td style={{ padding: '24px' }}>
-                      <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '1rem', border: '1px dashed #d1d5db' }}>
-                        <p style={{ margin: 0, fontSize: '0.95rem', color: '#1f2937', fontWeight: '600' }}>{evalu.accionExcelencia || 'Sin feedback.'}</p>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          </section>
         </div>
-      )}
+      </main>
 
-      {activeTab === 'analytics' && (
-        <AnalyticsView submissions={submissions} evaluations={allEvaluations} />
-      )}
-
-      {/* Modal Detail */}
+      {/* DETAIL MODAL */}
       {selectedSubmission && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '2.5rem', width: '100%', maxWidth: '700px', padding: '48px', position: 'relative', border: '4px solid #3f75ab' }}>
-            <button onClick={() => setSelectedSubmission(null)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', cursor: 'pointer' }}><X size={32} /></button>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: '950', color: '#3f75ab', marginBottom: '32px' }}>Detalle de Solicitud</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '40px' }}>
-              <div><label style={{ fontSize: '0.8rem', fontWeight: '900', color: '#6b7280' }}>Estudiante</label><div style={{ fontSize: '1.3rem', fontWeight: '900' }}>{selectedSubmission.nombre}</div></div>
-              <div><label style={{ fontSize: '0.8rem', fontWeight: '900', color: '#6b7280' }}>DNI</label><div style={{ fontSize: '1.3rem', fontWeight: '900' }}>{selectedSubmission.dni}</div></div>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', padding: '2.5rem', borderRadius: '2rem', width: '100%', maxWidth: '600px', position: 'relative' }}>
+            <button onClick={() => setSelectedSubmission(null)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', cursor: 'pointer' }}><X size={24}/></button>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e3a8a', marginBottom: '1.5rem' }}>Detalle de Expediente</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div><label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>ESTUDIANTE</label><div style={{ fontWeight: 700 }}>{selectedSubmission.nombre}</div></div>
+              <div><label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>DNI</label><div style={{ fontWeight: 700 }}>{selectedSubmission.dni}</div></div>
             </div>
-            <div style={{ background: '#f3f4f6', padding: '32px', borderRadius: '1.5rem', marginBottom: '32px' }}>
-              <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600' }}>{selectedSubmission.descripcion}</p>
+            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '1rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>DESCRIPCIÓN</label>
+              <p style={{ margin: '0.5rem 0 0 0', lineHeight: 1.6 }}>{selectedSubmission.descripcion || 'Sin descripción.'}</p>
             </div>
-            {selectedSubmission.status === 'pending' && (
-              <button 
-                onClick={async () => { await handleUpdateStatus(selectedSubmission.id, 'completed'); setSelectedSubmission(null); }}
-                style={{ width: '100%', background: '#10b981', color: '#fff', padding: '20px', borderRadius: '1.25rem', fontSize: '1.4rem', fontWeight: '950', border: 'none' }}
-              >
-                MARCAR COMO COMPLETADO
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -628,9 +798,5 @@ function AdminDashboardContent({ user }) {
 }
 
 export default function AdminDashboard() {
-  return (
-    <AuthGuard>
-      <AdminDashboardContent />
-    </AuthGuard>
-  );
+  return <AuthGuard><AdminDashboardContent /></AuthGuard>;
 }
